@@ -1171,9 +1171,10 @@ def plot_multix_boxplot_plotly(
 
     # Update layout for better visibility
     fig.update_layout(
-        font_family="Noto Sans",
+        font_family="Times New Roman",
         boxmode="group",
         boxgroupgap=0.1 if "boxgroupgap" not in kwargs else kwargs["boxgroupgap"],
+        title=None if "title" not in kwargs or ("show_title" in kwargs and not kwargs["show_title"]) else kwargs["title"],
         margin=dict(l=3, r=3, t=3 if ("show_title" in kwargs and kwargs["show_title"] == False) or "title" not in kwargs else 40, b=3),  # Adjust margins for better spacing
         yaxis=go.layout.YAxis(
             title=None if "y_title" not in kwargs or ("show_y" in kwargs and not kwargs["show_y"]) else kwargs["y_title"] ,

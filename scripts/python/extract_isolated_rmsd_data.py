@@ -34,9 +34,7 @@ def export_isolated_parameter_csv_files(args, df_filepath):
     df = pd.read_hdf(df_filepath, key=args.key)
 
     # Check if need to create a column for filter_specific_params
-    fsp_unique = df["filter_specific_params"].unique()
-
-    if len(fsp_unique) != 1 and "None" not in fsp_unique:
+    if type(df["filter_specific_params"].iloc[0]) == dict:
         for title in args.column_titles:
             if title.startswith("fsp_"):
                 df[title] = df["filter_specific_params"].apply(lambda x: float(x[title[4:]]))

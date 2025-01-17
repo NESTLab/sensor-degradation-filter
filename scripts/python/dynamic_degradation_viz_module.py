@@ -295,7 +295,7 @@ def rmsd(arr_base, arr_target):
 # Compute the RMSD and store into a DataFrame
 ################################################################################
 
-def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
+def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame, inf_est_type: str = "weighted"):
     """Compute the RMSD for each time step.
 
     A single RMSD value is computed from all the robots' values at a particular time step.
@@ -312,14 +312,21 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
     df = inf_est_df.loc[:, ~inf_est_df.columns.str.startswith("x")].copy(deep=True)
 
     # Get the columns desired
-    x_prime_columns = [col for col in inf_est_df.columns if col.startswith("x_prime_")]
+    x_columns = []
+    if inf_est_type == "weighted":
+        x_columns = [col for col in inf_est_df.columns if col.startswith("x_prime_")]
+    elif inf_est_type == "regular":
+        x_columns = [col for col in inf_est_df.columns if col.startswith("x_") and not col.startswith("x_prime_")]
+    else:
+        raise ValueError("Only \"weighted\" or \"regular\" type informed estimate allowed.")
+
     b_hat_columns = [col for col in sensor_acc_df.columns if col.startswith("b_hat_")]
     b_columns = [col for col in sensor_acc_df.columns if col.startswith("b_") and not col.startswith("b_hat_")]
 
     # Compute the RMSD
     df["inf_est_rmsd"] = inf_est_df.apply(
         lambda row: rmsd(
-            row[x_prime_columns].values,
+            row[x_columns].values,
             row["tfr"]
         ),
         axis=1
@@ -341,6 +348,36 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
 
 
 ################################################################################
+# Reduce DataFrame based on some keyword and either `step_ind` or `trial_ind`
+################################################################################
+
+def _reduce_rmsd_df_by_keyword_and_step_or_trial(df: pd.DataFrame, keyword: str, keyword_is_filter_specific: bool, step_or_trial: str):
+
+    if (step_or_trial != "step_ind" and step_or_trial != "trial_ind"):
+        raise ValueError("`step_or_trial` needs to either be \"step_ind\" or \"trial_ind\".")
+
+    actual_keyword = ""
+
+    if keyword_is_filter_specific:
+        actual_keyword = "fsp_" + keyword
+        df[actual_keyword] = df["filter_specific_params"].apply(lambda x: x.get(keyword, None))
+    else:
+        actual_keyword = keyword
+
+    return df.groupby([actual_keyword, step_or_trial]).agg(
+        inf_est_rmsd_mean=("inf_est_rmsd", "mean"),
+        inf_est_rmsd_var=("inf_est_rmsd", lambda x: x.var(ddof=1)),
+        sensor_acc_rmsd_mean=("sensor_acc_rmsd", "mean"),
+        sensor_acc_rmsd_var=("sensor_acc_rmsd", lambda x: x.var(ddof=1)),
+        count=("inf_est_rmsd", "count") # the count of inf_est_rmsd is the same as sensor_acc_rmsd
+    ).reset_index()
+
+################################################################################
+################################################################################
+
+
+
+################################################################################
 # Reduce DataFrame based on some keyword and `step_ind``
 ################################################################################
 
@@ -354,22 +391,28 @@ def reduce_rmsd_df_by_keyword_and_step_ind(df: pd.DataFrame, keyword: str, keywo
     Return:
         A reduced DataFrame containing the mean and variance of the RMSD data.
     """
-    actual_keyword = ""
+    return _reduce_rmsd_df_by_keyword_and_step_or_trial(df, keyword, keyword_is_filter_specific, "step_ind")
 
-    if keyword_is_filter_specific:
-        actual_keyword = "fsp_" + keyword
-        df[actual_keyword] = df["filter_specific_params"].apply(lambda x: x.get(keyword, None))
-    else:
-        actual_keyword = keyword
+################################################################################
+################################################################################
 
-    return df.groupby([actual_keyword, "step_ind"]).agg(
-        inf_est_rmsd_mean=("inf_est_rmsd", "mean"),
-        inf_est_rmsd_var=("inf_est_rmsd", lambda x: x.var(ddof=1)),
-        sensor_acc_rmsd_mean=("sensor_acc_rmsd", "mean"),
-        sensor_acc_rmsd_var=("sensor_acc_rmsd", lambda x: x.var(ddof=1)),
-        count=("inf_est_rmsd", "count") # the count of inf_est_rmsd is the same as sensor_acc_rmsd
-    ).reset_index()
 
+
+################################################################################
+# Reduce DataFrame based on some keyword and `trial_ind``
+################################################################################
+
+def reduce_rmsd_df_by_keyword_and_trial_ind(df: pd.DataFrame, keyword: str, keyword_is_filter_specific: bool = False):
+    """Reduce the size of the DataFrame by computing descriptive statistics for each unique `trial_ind` and `keyword`.
+
+    Args:
+        df: The DataFrame with columns `inf_est_rmsd` and `sensor_acc_rmsd`.
+        keyword: The parameter to group by (besides `trial_ind`) to compute stats from.
+
+    Return:
+        A reduced DataFrame containing the mean and variance of the RMSD data.
+    """
+    return _reduce_rmsd_df_by_keyword_and_step_or_trial(df, keyword, keyword_is_filter_specific, "trial_ind")
 
 ################################################################################
 ################################################################################
@@ -503,11 +546,11 @@ def plot_line_plotly(
     for ind, (group_name, group_df) in enumerate(df.groupby(color_key)):
 
         # Set current fill color
-        fc = list(sdvm.COLOR_BLIND_FRIENDLY_COLORS_DICT_RGBA.values())[ind]
+        fc = list(sdvm.COLOR_BLIND_FRIENDLY_COLORS_DICT_RGBA.values())[ind % len(sdvm.COLOR_BLIND_FRIENDLY_COLORS_DICT_RGBA)]
 
         match = re.match(r"rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)", fc)
         r, g, b, _ = match.groups()
-        fc_transparent = "rgba({0}, {1}, {2}, 0.15)".format(r, g, b)
+        fc_transparent = "rgba({0}, {1}, {2}, 0.2)".format(r, g, b)
 
         # Add main line for the group
         fig.add_trace(
@@ -518,6 +561,7 @@ def plot_line_plotly(
                 name="{0}={1}".format(color_key, group_name),
                 legendgroup=group_name,
                 line={
+                    "width": 5,
                     "color": fc
                 }
             )
@@ -543,7 +587,6 @@ def plot_line_plotly(
 
     # Update layout for better visibility
     fig.update_layout(
-        # plot_bgcolor="rgb(229, 236, 246)",
         plot_bgcolor="rgb(240, 242, 246)",
         font_family="Times New Roman",
         title=None if "title" not in kwargs or ("show_title" in kwargs and not kwargs["show_title"]) else kwargs["title"],

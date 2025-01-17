@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="sensor_degradation_filter_py",
-    version="1.0.0",
+    version="2.0.0",
     description= "Python library for the sensor degradation filter",
     author="Khai Yi Chin",
     author_email="khaiyichin@gmail.com",

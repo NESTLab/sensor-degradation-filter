@@ -122,7 +122,7 @@ SEEDS=(
     540361
     345030
     452015
-)            # the randomly pre-generated list of seeds (so that all the experiments are the same across the two variants)
+) # the randomly pre-generated list of seeds (so that all the experiments are the same across the two variants)
 METHOD=ORACLE
 NUM_TICKS=30000
 SPEED=14.14
@@ -227,11 +227,11 @@ sed -i "s/<entity.*/<entity quantity=\"${NUM_ROBOTS}\" max_trials=\"100\" base_n
 
     # Iterate over assumed sensor accuracies (dummy values; uses true accuracy value)
     for ((i = 0; i < ${#ASSUMED_ACC[@]}; i++)); do
-        sed -i -E "/<loop_functions/,/<\/loop_functions>/ s/(flawed_robots[[:space:]]*num=\")[^\"]*(\"[[:space:]]*acc_b=\")[^\"]*(\"[[:space:]]*acc_w=\")[^\"]*(\"[[:space:]]*activate_filter_for_all=\")[^\"]*/\1${NUM_FLAWED_ROBOTS}\2${TRUE_ACC_DEC[j]}\3${TRUE_ACC_DEC[j]}\4${CORRECT_FILTER}/" ${ACTUAL_ARGOSFILE}
-        sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(init_mean=\")[^\"]*/\1${TRUE_ACC_DEC[j]}/" ${ACTUAL_ARGOSFILE} # follows the true accuracy
 
         # Iterate over true sensor accuracies
         for ((j = 0; j < ${#TRUE_ACC[@]}; j++)); do
+            sed -i -E "/<loop_functions/,/<\/loop_functions>/ s/(flawed_robots[[:space:]]*num=\")[^\"]*(\"[[:space:]]*acc_b=\")[^\"]*(\"[[:space:]]*acc_w=\")[^\"]*(\"[[:space:]]*activate_filter_for_all=\")[^\"]*/\1${NUM_FLAWED_ROBOTS}\2${TRUE_ACC_DEC[j]}\3${TRUE_ACC_DEC[j]}\4${CORRECT_FILTER}/" ${ACTUAL_ARGOSFILE}
+            sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(init_mean=\")[^\"]*/\1${TRUE_ACC_DEC[j]}/" ${ACTUAL_ARGOSFILE} # follows the true accuracy
             sed -i -E "/<ground_sensor/,/\/>/ s/([[:space:]]*sensor_acc_b=\")[^\"]*/\1${TRUE_ACC_DEC[j]}/" ${ACTUAL_ARGOSFILE}
             sed -i -E "/<ground_sensor/,/\/>/ s/([[:space:]]*sensor_acc_w=\")[^\"]*/\1${TRUE_ACC_DEC[j]}/" ${ACTUAL_ARGOSFILE}
 

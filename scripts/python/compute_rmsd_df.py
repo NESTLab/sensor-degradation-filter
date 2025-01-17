@@ -39,14 +39,14 @@ def find_h5_files(args):
                     print("Found {0} \"{1}*\" files in folder={2}...".format(len(inf_est_dfs), ddvm.INF_EST_DF_PREFIX, root))
                     sys.stdout.flush()
 
-                    inf_est_df_filepaths.extend(inf_est_dfs)
+                inf_est_df_filepaths.extend(inf_est_dfs)
             
             if any(sensor_acc_dfs):
                 if args.verbose:
                     print("Found {0} \"{1}*\" files in folder={2}...".format(len(sensor_acc_dfs), ddvm.SENSOR_ACC_DF_PREFIX, root))
                     sys.stdout.flush()
                     
-                    sensor_acc_df_filepaths.extend(sensor_acc_dfs)
+                sensor_acc_df_filepaths.extend(sensor_acc_dfs)
 
     return inf_est_df_filepaths, sensor_acc_df_filepaths
 
@@ -67,7 +67,7 @@ def process_and_compute_rmsd(
         sensor_acc_df = pd.read_hdf(sensor_acc_df_path)
 
         # Compute RMSD
-        return ddvm.compute_raw_rmsd(inf_est_df, sensor_acc_df)
+        return ddvm.compute_raw_rmsd(inf_est_df, sensor_acc_df, args.inf_est_type)
 
     dfs = Parallel(n_jobs=-1, verbose=0)(
         delayed(parallel_load_compute_rmsd)(inf_est_df, sensor_acc_df) for inf_est_df, sensor_acc_df in zip(inf_est_df_filepaths, sensor_acc_df_filepaths)
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="rmsd_data.h5", type=str, help="output filename (default: rmsd_data.h5)")
     parser.add_argument("--key", default="df", help="dictionary key when storing the Pandas DataFrame (default: \"df\")")
     parser.add_argument("--verbose", action="store_true", help="flag to run with verbose output")
+    parser.add_argument("--inf_est_type", type=str, default="weighted", help="choose between \"weighted\" or \"regular\" informed estimates (default: \"weighted\")")
     
     args = parser.parse_args()
 
