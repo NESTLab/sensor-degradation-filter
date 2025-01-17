@@ -91,7 +91,6 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="rmsd_data.h5", type=str, help="output filename (default: rmsd_data.h5)")
     parser.add_argument("--key", default="df", help="dictionary key when storing the Pandas DataFrame (default: \"df\")")
     parser.add_argument("--verbose", action="store_true", help="flag to run with verbose output")
-    parser.add_argument("--inf_est_type", type=str, default="weighted", help="choose between \"weighted\" or \"regular\" informed estimates (default: \"weighted\")")
     
     args = parser.parse_args()
 

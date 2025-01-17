@@ -312,21 +312,24 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame, inf_
     df = inf_est_df.loc[:, ~inf_est_df.columns.str.startswith("x")].copy(deep=True)
 
     # Get the columns desired
-    x_columns = []
-    if inf_est_type == "weighted":
-        x_columns = [col for col in inf_est_df.columns if col.startswith("x_prime_")]
-    elif inf_est_type == "regular":
-        x_columns = [col for col in inf_est_df.columns if col.startswith("x_") and not col.startswith("x_prime_")]
-    else:
-        raise ValueError("Only \"weighted\" or \"regular\" type informed estimate allowed.")
 
+    regular_x_columns = [col for col in inf_est_df.columns if col.startswith("x_") and not col.startswith("x_prime_")]
+    weighted_x_columns = [col for col in inf_est_df.columns if col.startswith("x_prime_")]
     b_hat_columns = [col for col in sensor_acc_df.columns if col.startswith("b_hat_")]
     b_columns = [col for col in sensor_acc_df.columns if col.startswith("b_") and not col.startswith("b_hat_")]
 
     # Compute the RMSD
-    df["inf_est_rmsd"] = inf_est_df.apply(
+    df["regular_inf_est_rmsd"] = inf_est_df.apply(
         lambda row: rmsd(
-            row[x_columns].values,
+            row[regular_x_columns].values,
+            row["tfr"]
+        ),
+        axis=1
+    )
+
+    df["weighted_inf_est_rmsd"] = inf_est_df.apply(
+        lambda row: rmsd(
+            row[weighted_x_columns].values,
             row["tfr"]
         ),
         axis=1
