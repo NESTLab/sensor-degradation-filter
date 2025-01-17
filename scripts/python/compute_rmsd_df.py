@@ -67,7 +67,7 @@ def process_and_compute_rmsd(
         sensor_acc_df = pd.read_hdf(sensor_acc_df_path)
 
         # Compute RMSD
-        return ddvm.compute_raw_rmsd(inf_est_df, sensor_acc_df, args.inf_est_type)
+        return ddvm.compute_raw_rmsd(inf_est_df, sensor_acc_df)
 
     dfs = Parallel(n_jobs=-1, verbose=0)(
         delayed(parallel_load_compute_rmsd)(inf_est_df, sensor_acc_df) for inf_est_df, sensor_acc_df in zip(inf_est_df_filepaths, sensor_acc_df_filepaths)

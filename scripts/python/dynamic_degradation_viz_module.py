@@ -295,7 +295,7 @@ def rmsd(arr_base, arr_target):
 # Compute the RMSD and store into a DataFrame
 ################################################################################
 
-def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame, inf_est_type: str = "weighted"):
+def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
     """Compute the RMSD for each time step.
 
     A single RMSD value is computed from all the robots' values at a particular time step.

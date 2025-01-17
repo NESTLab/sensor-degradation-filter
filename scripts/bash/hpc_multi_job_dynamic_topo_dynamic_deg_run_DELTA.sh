@@ -53,7 +53,7 @@ sed -i -E "s/(FILTER_PERIOD=).*/\1${FILTER_PERIOD}/" ${SBATCH_SCRIPT_TEMPLATE}
 sed -i -E "s/(METHOD=).*/\1${METHOD}/" ${SBATCH_SCRIPT_TEMPLATE}
 sed -i -E "s/(VARIANTS=).*/\1\(${VARIANTS[*]}\)/" ${SBATCH_SCRIPT_TEMPLATE}
 
-for ((i = 0; i < ${TRUE_DEG_DRIFT[@]}; i++)); do
+for ((i = 0; i < ${#TRUE_DEG_DRIFT[@]}; i++)); do
     sed -i -E "s/(TRUE_DEG_DRIFT=).*/\1${TRUE_DEG_DRIFT[i]}/" ${SBATCH_SCRIPT_TEMPLATE}
 
     for ((j = 0; j < ${#DENSITY[@]}; j++)); do
@@ -79,7 +79,7 @@ for ((i = 0; i < ${TRUE_DEG_DRIFT[@]}; i++)); do
 
                 # Run the job
                 # With each core running 1 trial, we should only need about 500M each per core, leaving about 1G left for the waiting core
-                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 02:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
+                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
             done
         done
     done
