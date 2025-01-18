@@ -368,11 +368,13 @@ def _reduce_rmsd_df_by_keyword_and_step_or_trial(df: pd.DataFrame, keyword: str,
         actual_keyword = keyword
 
     return df.groupby([actual_keyword, step_or_trial]).agg(
-        inf_est_rmsd_mean=("inf_est_rmsd", "mean"),
-        inf_est_rmsd_var=("inf_est_rmsd", lambda x: x.var(ddof=1)),
+        regular_inf_est_rmsd_mean=("regular_inf_est_rmsd", "mean"),
+        regular_inf_est_rmsd_var=("regular_inf_est_rmsd", lambda x: x.var(ddof=1)),
+        weighted_inf_est_rmsd_mean=("weighted_inf_est_rmsd", "mean"),
+        weighted_inf_est_rmsd_var=("weighted_inf_est_rmsd", lambda x: x.var(ddof=1)),
         sensor_acc_rmsd_mean=("sensor_acc_rmsd", "mean"),
         sensor_acc_rmsd_var=("sensor_acc_rmsd", lambda x: x.var(ddof=1)),
-        count=("inf_est_rmsd", "count") # the count of inf_est_rmsd is the same as sensor_acc_rmsd
+        count=("regular_inf_est_rmsd", "count") # the count of inf_est_rmsd is the same as sensor_acc_rmsd
     ).reset_index()
 
 ################################################################################
@@ -587,6 +589,14 @@ def plot_line_plotly(
                     showlegend=False,  # Hide legend entry for the bounds
                 )
             )
+
+    if "vline_x" in kwargs:
+        fig.add_vline(
+            x=kwargs["vline_x"],
+            line_width=kwargs["vline_width"],
+            line_dash=kwargs["vline_dash"],
+            line_color=kwargs["vline_color"],
+        )
 
     # Update layout for better visibility
     fig.update_layout(
