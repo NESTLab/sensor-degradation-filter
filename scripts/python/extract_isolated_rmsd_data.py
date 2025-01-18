@@ -28,7 +28,7 @@ def find_rmsd_hdf_files(args):
 
     return rmsd_df_filepaths
 
-def export_isolated_parameter_csv_files(args, df_filepath):
+def export_isolated_parameter_hdf_files(args, df_filepath):
 
     # Load the DataFrame
     df = pd.read_hdf(df_filepath, key=args.key)
@@ -53,7 +53,7 @@ def export_isolated_parameter_csv_files(args, df_filepath):
         )
     )
 
-    # Go through each combination to export CSV file
+    # Go through each combination to export HDF file
     for comb in combinations:
 
         filename = "rmsd_"
@@ -66,10 +66,10 @@ def export_isolated_parameter_csv_files(args, df_filepath):
 
         output_name = os.path.join(
             os.path.dirname(df_filepath),
-            filename[:-1] + ".csv"
+            filename[:-1] + ".h5"
         )
 
-        df[boolean_conditions].to_csv(output_name, index=False)
+        df[boolean_conditions].to_hdf(output_name, key="df")
 
         print("Done with {0} = {1}".format(args.column_titles, comb))
 
@@ -78,9 +78,9 @@ def main(args):
     # Find the filepaths
     df_filepaths = find_rmsd_hdf_files(args)
 
-    # Export the CSV files
+    # Export the HDF files
     Parallel(n_jobs=-1)(
-        delayed(export_isolated_parameter_csv_files)(args, df_filepath) for df_filepath in df_filepaths
+        delayed(export_isolated_parameter_hdf_files)(args, df_filepath) for df_filepath in df_filepaths
     )
 
 if __name__ == "__main__":
@@ -95,10 +95,10 @@ if __name__ == "__main__":
         "tfr"
     ]
 
-    parser = argparse.ArgumentParser(description="(HPC USE ONLY) Extract isolated RMSD data from multiple RMSD HDF files. This outputs CSV files for each unique combination of each parameter.")
+    parser = argparse.ArgumentParser(description="(HPC USE ONLY) Extract isolated RMSD data from multiple RMSD HDF files. This outputs HDF files for each unique combination of each parameter.")
     parser.add_argument("FOLDER", type=str, help="path to the folder containing all the RMSD HDF data files; the files can be several levels deep")
     parser.add_argument("--key", default="df", help="dictionary key when storing the Pandas DataFrame (default: \"df\")")
-    parser.add_argument("--column_titles", nargs="+", default=default_column_title_lst, help="list of column titles to create combinations of CSV files from (default: [\"true_drift_coeff\", \"lowest_degraded_acc_lvl\", \"fsp_pred_deg_model_B\", \"correct_sensor_acc_b\", \"flawed_sensor_acc_b\", \"tfr\"])")
+    parser.add_argument("--column_titles", nargs="+", default=default_column_title_lst, help="list of column titles to create combinations of HDF files from (default: [\"true_drift_coeff\", \"lowest_degraded_acc_lvl\", \"fsp_pred_deg_model_B\", \"correct_sensor_acc_b\", \"flawed_sensor_acc_b\", \"tfr\"])")
 
     args = parser.parse_args()
 

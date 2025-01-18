@@ -12,7 +12,7 @@ FILTER_PERIOD=(1000 2000 4000)
 
 module load slurm
 
-EXECUTATBLE_SCRIPT=extract_convergence_accuracy_data.py
+EXECUTABLE_SCRIPT=extract_convergence_accuracy_data.py
 
 # Activate virtual environment
 PYTHON_VENV_ACT_BIN=/home/kchin/sensor-degradation-filter/.venv/bin/activate
@@ -29,7 +29,7 @@ do
 
         # Run the job
         # (The memory usage is actually as high as 90Gb, but the --mem flag asks for minimum amount, and there's no upper limit)
-	    sbatch -N 1 -n 32 --mem=64G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 04:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end --wrap "${EXECUTATBLE_SCRIPT} . 0.01 --output ${JOB_NAME}.h5 --verbose"
+	    sbatch -N 1 -n 32 --mem=64G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 04:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end --wrap "${EXECUTABLE_SCRIPT} . 0.01 --output ${JOB_NAME}.h5 --verbose"
         popd
     done
 done

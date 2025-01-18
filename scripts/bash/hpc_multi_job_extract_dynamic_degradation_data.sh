@@ -9,7 +9,7 @@ PRED_DEG_MODEL_B=(-10e-6 -25e-6 -40e-6)
 
 module load slurm
 
-EXECUTATBLE_SCRIPT=extract_dynamic_degradation_data.py
+EXECUTABLE_SCRIPT=extract_dynamic_degradation_data.py
 
 # Activate virtual environment
 PYTHON_VENV_ACT_BIN=/home/kchin/sensor-degradation-filter/.venv/bin/activate
@@ -26,7 +26,7 @@ for ((i = 0; i < ${#TRUE_DEG_DRIFT[@]}; i++)); do
 
                 # Run the job
                 # (The memory usage can go higher, but the --mem flag asks for minimum amount, and there's no upper limit)
-                sbatch -N 1 -n 32 --mem=40G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end --wrap "${EXECUTATBLE_SCRIPT} . --output ${JOB_NAME}.h5 --verbose"
+                sbatch -N 1 -n 32 --mem=40G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end --wrap "${EXECUTABLE_SCRIPT} . --output ${JOB_NAME}.h5 --verbose"
                 popd
             done
         done
