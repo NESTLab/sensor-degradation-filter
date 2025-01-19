@@ -86,7 +86,8 @@
                     period_ticks="5"
                     observation_queue_size="1000"
                     dynamic_observation_queue="true"
-                    use_weighted_avg_informed_est="true">
+                    use_weighted_avg_informed_est="true"
+                    dynamic_observation_queue_window_size="500">
                 </sensor_degradation_filter>
             </params>
         </kheperaiv_diffusion_motion_controller>

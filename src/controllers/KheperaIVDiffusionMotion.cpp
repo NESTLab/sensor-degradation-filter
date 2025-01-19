@@ -273,20 +273,7 @@ void KheperaIVDiffusionMotion::Init(TConfigurationNode &xml_node)
         if (dynamic_observation_queue)
         {
             collective_perception_algo_ptr_->GetParamsPtr()->UseDynamicObservationQueue = dynamic_observation_queue;
-
-            if (sensor_degradation_filter_params.FilterSpecificParams.find("pred_deg_model_B") != sensor_degradation_filter_params.FilterSpecificParams.end())
-            {
-                // Compute the fixed window size to be used when averaging the estimated sensor accuracy degradation rate and the estimated fill ratio
-                assumed_degradation_drift_ = std::stod(sensor_degradation_filter_params.FilterSpecificParams["pred_deg_model_B"]);
-
-                window_size_ = static_cast<size_t>(std::ceil(0.05 / (sensor_degradation_filter_params.FilterActivationPeriodTicks * std::abs(assumed_degradation_drift_))));
-            }
-            else
-            {
-                LOG << "Cannot find assumed degradation drift; perhaps filter type isn't for dynamic sensor degradation?" << std::endl;
-                LOG << "Setting window size to be 10 * filter activation period ticks" << std::endl;
-                window_size_ = 10 * sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks;
-            }
+            GetNodeAttribute(sensor_degradation_filter_node, "dynamic_observation_queue_window_size", window_size_);
         }
 
         // Set the boolean for using weighted average informed estimates which is only possible because observation queue size > 0
@@ -428,7 +415,7 @@ void KheperaIVDiffusionMotion::ControlStep()
                 }
                 else
                 {
-                    dynamic_queue_size = static_cast<size_t>(std::ceil(0.25 /
+                    dynamic_queue_size = static_cast<size_t>(std::ceil(0.1 /
                                                                        std::abs(sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks *
                                                                                 (2.0 * averaged_deg_rates_and_fill_ratio_refs_.second - 1.0) *
                                                                                 averaged_deg_rates_and_fill_ratio_refs_.first)));

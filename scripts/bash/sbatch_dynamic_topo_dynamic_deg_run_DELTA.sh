@@ -71,7 +71,8 @@ TRUE_DEG_DIFFUSION=1e-4        # true sensor degradation drift coefficient (Wien
 LOWEST_DEGRADED_ACC_LVL=500    # lowest true accuracy value that the sensor will degrade to, in 1000s format
 LDAL_DEC=0.5                   # lowest true accuracy value in decimal format (bash doesn't support decimal math)
 OBS_QUEUE_SIZE=1000            # max observation queue size
-DYNAMIC_QUEUE=true             # whether to use dynamic-sized observation queues
+DYNAMIC_QUEUE=true             # whether to use a dynamic-sized observation queue
+DYNAMIC_QUEUE_WINDOW_SIZE=500  # the window size to compute the average degradation rate (if using a dynamic-sized observation queue)
 WEIGHTED_AVG_INFORMED_EST=true # whether to use the weighted informed estimates in the filter
 PRED_DEG_MODEL_B=-5e-5         # state prediction model B
 PRED_DEG_VAR_R=1e-8            # state prediction variance R
@@ -186,6 +187,7 @@ sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(metho
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(period_ticks=\")[^\"]*/\1${FILTER_PERIOD}/" ${ACTUAL_ARGOSFILE}
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(observation_queue_size=\")[^\"]*/\1${OBS_QUEUE_SIZE}/" ${ACTUAL_ARGOSFILE}
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(dynamic_observation_queue=\")[^\"]*/\1${DYNAMIC_QUEUE}/" ${ACTUAL_ARGOSFILE}
+sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(dynamic_observation_queue_window_size=\")[^\"]*/\1${DYNAMIC_QUEUE_WINDOW_SIZE}/" ${ACTUAL_ARGOSFILE}
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(use_weighted_avg_informed_est=\")[^\"]*/\1${WEIGHTED_AVG_INFORMED_EST}/" ${ACTUAL_ARGOSFILE}
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(pred_deg_model_B=\")[^\"]*/\1${PRED_DEG_MODEL_B}/" ${ACTUAL_ARGOSFILE}
 sed -i -E "/<sensor_degradation_filter/,/<\/sensor_degradation_filter>/ s/(pred_deg_var_R=\")[^\"]*/\1${PRED_DEG_VAR_R}/" ${ACTUAL_ARGOSFILE}

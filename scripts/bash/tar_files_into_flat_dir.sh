@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PREFIX="rmsd_"
-EXT="csv"
+EXT="h5"
 FLATDIR="tmp/flat_dir_for_tar"
 
 # Create temporary directory to copy files to

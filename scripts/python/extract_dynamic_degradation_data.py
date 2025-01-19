@@ -68,8 +68,8 @@ def save_to_h5(json_data_lst, args):
 
     # Verify that the sensor_acc_df is the same
     if ((sensor_acc_df["tfr"].unique() != unique_tfrs).all() or
-        (sensor_acc_df["flawed_sensor_acc_b"].unique()).all() != unique_flwbs or
-        (sensor_acc_df["correct_sensor_acc_b"].unique()).all() != unique_corbs):
+        (sensor_acc_df["flawed_sensor_acc_b"].unique() != unique_flwbs).all() or
+        (sensor_acc_df["correct_sensor_acc_b"].unique() != unique_corbs).all()):
         raise ValueError("The unique values of either \"tfr\", \"flawed_sensor_acc_b\" or \"correct_sensor_acc_b\" are not the same between the `inf_est` and `sensor_acc` DataFrames.")
 
     for t in unique_tfrs:

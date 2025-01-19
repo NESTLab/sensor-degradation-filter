@@ -160,7 +160,7 @@ void DynamicDegradationFilterDelta::Init()
         };
 
         MAP_optimizer_.set_max_objective(nlopt_wrapped_MAP_fcn, &lap_params_);
-        MAP_optimizer_.set_xtol_abs(1e-9);
+        MAP_optimizer_.set_xtol_abs(1e-12);
 
         // Initialize the internal unit factor (only need to be done once)
         lap_params_.InternalUnitFactor = internal_unit_factor_;
