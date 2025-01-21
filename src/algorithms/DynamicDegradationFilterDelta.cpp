@@ -304,7 +304,7 @@ void DynamicDegradationFilterDelta::Estimate()
         params_ptr_->AssumedSensorAcc["b"] = update_.first;
     }
 
-    // Apply exponential smoothing
+    // Apply exponential smoothing (01/21/2025 note: this has been turned off for the time being, i.e., no smoothing applied.)
     if (prev_assumed_acc_ == -1.0)
     {
         prev_assumed_acc_ = params_ptr_->AssumedSensorAcc["b"];

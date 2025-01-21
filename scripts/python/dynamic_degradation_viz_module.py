@@ -20,6 +20,8 @@ class DynamicDegradationJsonData(sdvm.StaticDegradationJsonData):
         self.true_diffusion_coeff = json_dict["true_diffusion_coeff"]
         self.lowest_degraded_acc_lvl = json_dict["lowest_degraded_acc_lvl"]
         self.obs_queue_size = json_dict["obs_queue_size"]
+        self.dynamic_obs_queue = json_dict["dynamic_observation_queue"]
+        self.dynamic_obs_queue_window_size = json_dict["dynamic_observation_queue_window_size"]
 
     def load_data(self, folder_path):
         """Load the JSON data from a given folder.
@@ -200,6 +202,8 @@ def extract_dynamic_degradation_data_to_dfs(
             "true_diffusion_coeff": np.repeat(json_data_obj.true_diffusion_coeff, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
             "lowest_degraded_acc_lvl": np.repeat(json_data_obj.lowest_degraded_acc_lvl, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
             "obs_queue_size": np.repeat(json_data_obj.obs_queue_size, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
+            "dynamic_obs_queue": np.repeat(json_data_obj.dynamic_obs_queue, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
+            "dynamic_obs_queue_window_size": np.repeat(json_data_obj.dynamic_obs_queue_window_size, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
             "comms_range": np.repeat(json_data_obj.comms_range, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
             "meas_period": np.repeat(json_data_obj.meas_period, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
             "speed": np.repeat(json_data_obj.speed, (json_data_obj.num_trials * (json_data_obj.num_steps+1))),
@@ -661,7 +665,7 @@ def plot_line_plotly(
         coloraxis_showscale=True if "show_legend" not in kwargs else kwargs["show_legend"]
     )
 
-    fig.show()
+    if "show_plot" in kwargs and kwargs["show_plot"]: fig.show()
 
     if "output_path" in kwargs and kwargs["output_path"] is not None:
         fig.write_image(

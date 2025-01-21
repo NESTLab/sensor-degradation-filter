@@ -263,28 +263,27 @@ sed -i "s/<entity.*/<entity quantity=\"${NUM_ROBOTS}\" max_trials=\"100\" base_n
                         # Create folder for each seed (even though only one data file generated, as multi-threaded run would overwrite the data before we can change its filename)
                         mkdir -p data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}
 
+                        # Create a copy of the configuration file for the specific trial
+                        cp ${ACTUAL_ARGOSFILE} data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
+
                         # Configure experiment length and seed
-                        sed -i "s/<experiment.*/<experiment length=\"$((${NUM_TICKS} / ${TICKS_PER_SECOND}))\" ticks_per_second=\"${TICKS_PER_SECOND}\" random_seed=\"${SEEDS[m]}\" \/>/" ${ACTUAL_ARGOSFILE}
+                        sed -i "s/<experiment.*/<experiment length=\"$((${NUM_TICKS} / ${TICKS_PER_SECOND}))\" ticks_per_second=\"${TICKS_PER_SECOND}\" random_seed=\"${SEEDS[m]}\" \/>/" data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
 
                         # Configure output path
-                        sed -i -E "/<loop_functions/,/<\/loop_functions>/ s/(path folder=\")[^\"]*/\1data\/${JSON_FOLDER}\/${VARIANTS[l]}_variant\/${m}/" ${ACTUAL_ARGOSFILE}
+                        sed -i -E "/<loop_functions/,/<\/loop_functions>/ s/(path folder=\")[^\"]*/\1data\/${JSON_FOLDER}\/${VARIANTS[l]}_variant\/${m}/" data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
 
-                        sleep 1.0
+                        # Run the experiment
+                        srun --exclusive --ntasks=1 --mem-per-cpu=500M bash -c "
 
-                        # Run the following in a subshell in multi-threaded mode
-                        (
-                            cp ${ACTUAL_ARGOSFILE} data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
+                            run_dynamic_topo_simulations -l /dev/null -c data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
 
-                            # Run the experiment
-                            srun --exclusive --ntasks=1 --mem-per-cpu=500M run_dynamic_topo_simulations -l /dev/null -c data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/exp.argos
-
-                            # Modify the JSON data file so that `trial_ind` value reflects the correct trial index
-                            sed -i -E "s/([[:space:]]*\"num_trials\"[[:space:]]*:[[:space:]]*)[0-9]+/\1${#SEEDS[@]}/" data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/${UNPROCESSED_DATA_FILE}
-                            sed -i -E "s/([[:space:]]*\"trial_ind\"[[:space:]]*:[[:space:]]*)0/\1${m}/" data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/${UNPROCESSED_DATA_FILE}
+                            # Modify the JSON data file so that trial_ind value reflects the correct trial index
+                            sed -i -E 's/([[:space:]]*\"num_trials\"[[:space:]]*:[[:space:]]*)[0-9]+/\1${#SEEDS[@]}/' data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/${UNPROCESSED_DATA_FILE}
+                            sed -i -E 's/([[:space:]]*\"trial_ind\"[[:space:]]*:[[:space:]]*)0/\1${m}/' data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/${UNPROCESSED_DATA_FILE}
 
                             # Rename and move the file
                             mv data/${JSON_FOLDER}/${VARIANTS[l]}_variant/${m}/${UNPROCESSED_DATA_FILE} data/${JSON_FOLDER}/${VARIANTS[l]}_variant/flw${NUM_FLAWED_ROBOTS}_t${m}.json
-                        ) &
+                        " &
                     done
 
                     # Let all the background processes complete

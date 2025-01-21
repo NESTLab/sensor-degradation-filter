@@ -39,6 +39,8 @@ struct ExperimentParams
 
     UInt32 MaxPlacementTrials = 0;
 
+    UInt32 DynamicObservationQueueWindowSize = false;
+
     std::unordered_map<std::string, std::string> FilterSpecificParams;
 
     std::unordered_map<std::string, Real> ActualSensorAcc = {{"b", -1.0}, {"w", -1.0}};
@@ -64,6 +66,8 @@ struct ExperimentParams
     bool FilterActiveForAll = false;
 
     bool DynamicDegradation = false;
+
+    bool DynamicObservationQueue = false;
 
     std::string FilterMethod = "Unset";
 

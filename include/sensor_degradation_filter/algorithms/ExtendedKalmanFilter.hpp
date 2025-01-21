@@ -35,7 +35,7 @@ protected:
 
     std::function<double(double, const std::vector<double> &)> nonlinear_measurement_update_function_;
 
-    double exponential_smoothing_factor_ = 0.005;
+    double exponential_smoothing_factor_ = 1.0; // ignore this for the time being
 
     double kalman_gain_ = 0.0; // Kalman gain
 

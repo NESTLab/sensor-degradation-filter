@@ -81,7 +81,7 @@ for ((i = 0; i < ${#TRUE_DEG_DRIFT[@]}; i++)); do
 
                 # Run the job
                 # With each core running 1 trial, we should only need about 500M each per core, leaving about 1G left for the waiting core
-                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
+                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:30:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
             done
         done
     done

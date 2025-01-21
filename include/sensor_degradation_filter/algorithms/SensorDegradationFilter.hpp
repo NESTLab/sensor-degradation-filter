@@ -24,6 +24,10 @@ public:
 
         unsigned int FilterActivationPeriodTicks = 0;
 
+        bool UseDynamicObservationQueue = false;
+
+        int DynamicObservationQueueWindowSize = -1;
+
         std::unordered_map<std::string, std::string> FilterSpecificParams;
 
         std::unordered_map<std::string, double> AssumedSensorAcc = {{"b", -1.0}, {"w", -1.0}};

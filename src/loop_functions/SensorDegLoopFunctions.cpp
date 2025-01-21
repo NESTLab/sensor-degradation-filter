@@ -108,6 +108,8 @@ void SensorDegLoopFunctions::Init(TConfigurationNode &t_tree)
         // Grab filter parameters
         exp_params_.FilterMethod = diffusion_controller.GetSensorDegradationFilterParams().Method;
         exp_params_.FilterPeriod = diffusion_controller.GetSensorDegradationFilterParams().FilterActivationPeriodTicks;
+        exp_params_.DynamicObservationQueue = diffusion_controller.GetSensorDegradationFilterParams().UseDynamicObservationQueue;
+        exp_params_.DynamicObservationQueueWindowSize = diffusion_controller.GetSensorDegradationFilterParams().DynamicObservationQueueWindowSize;
         exp_params_.FilterSpecificParams = diffusion_controller.GetSensorDegradationFilterParams().FilterSpecificParams;
 
         // Grab ground sensor parameters
@@ -377,6 +379,8 @@ void SensorDegLoopFunctions::InitializeJSON()
     curr_json_["true_diffusion_coeff"] = exp_params_.GroundSensorDiffusionCoeff;
     curr_json_["lowest_degraded_acc_lvl"] = exp_params_.LowestDegradedAccuracyLevel;
     curr_json_["obs_queue_size"] = exp_params_.ObservationQueueSize;
+    curr_json_["dynamic_observation_queue"] = exp_params_.DynamicObservationQueue;
+    curr_json_["dynamic_observation_queue_window_size"] = exp_params_.DynamicObservationQueueWindowSize;
     curr_json_["flawed_sensor_acc_b"] = exp_params_.AssumedSensorAcc["b"];
     curr_json_["flawed_sensor_acc_w"] = exp_params_.AssumedSensorAcc["w"];
     curr_json_["correct_sensor_acc_b"] = exp_params_.ActualSensorAcc["b"];

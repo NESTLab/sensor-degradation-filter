@@ -76,7 +76,7 @@ public:
             InformedEstimateHistory.clear();
         }
 
-        void AddToQueue(unsigned int obs, size_t dynamic_queue_size = 0)
+        void AddToQueue(unsigned int obs, int dynamic_queue_size)
         {
             /*
                 The way this works is that the actual queue (ObservationQueue) that stores observation grows in size until MaxObservationQueueSize.
@@ -93,20 +93,20 @@ public:
             }
 
             // Adjust the number of black tiles seen depending on whether a dynamic queue is used
-            if (UseDynamicObservationQueue && dynamic_queue_size < ObservationQueue.size())
+            if (dynamic_queue_size > 0 && dynamic_queue_size < ObservationQueue.size())
             {
-                if (dynamic_queue_size == 0)
-                {
-                    throw std::runtime_error("Dynamic queue size cannot be zero!");
-                }
                 NumBlackTilesSeen = std::accumulate(ObservationQueue.end() - dynamic_queue_size, ObservationQueue.end(), 0);
                 NumObservations = dynamic_queue_size;
             }
-            else
+            else if (dynamic_queue_size = -1) // not using dynamic queue sizes
             {
                 // Calculate number of black tiles seen
                 NumBlackTilesSeen = std::accumulate(ObservationQueue.begin(), ObservationQueue.end(), 0);
                 NumObservations = ObservationQueue.size();
+            }
+            else
+            {
+                throw std::runtime_error("Unknown dynamic queue size = " + std::to_string(dynamic_queue_size));
             }
         }
 
@@ -147,8 +147,6 @@ public:
         std::vector<EstConfPair> MostRecentNeighborEstimates;
 
         bool UseObservationQueue = false;
-
-        bool UseDynamicObservationQueue = false;
 
         double WeightedAverageInformedEstimate = 0.0;
 
