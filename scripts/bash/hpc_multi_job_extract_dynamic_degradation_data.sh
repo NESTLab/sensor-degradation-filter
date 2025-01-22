@@ -2,10 +2,10 @@
 
 JOB_TYPE=extract_dynamic_degradation_data
 
-TRUE_DEG_DRIFT=(0 -25e-6)
+TRUE_DEG_DRIFT=(0 -10e-6)
 DENSITY=(1)
 LDAL=(500 700)
-PRED_DEG_MODEL_B=(-10e-6 -25e-6 -40e-6)
+PRED_DEG_MODEL_B_RANGE=(-5e-6 -10e-6 -15e-6)
 
 module load slurm
 
@@ -18,11 +18,11 @@ source ${PYTHON_VENV_ACT_BIN}
 for ((i = 0; i < ${#TRUE_DEG_DRIFT[@]}; i++)); do
     for ((j = 0; j < ${#DENSITY[@]}; j++)); do
         for ((k = 0; k < ${#LDAL[@]}; k++)); do
-            for ((l = 0; l < ${#PRED_DEG_MODEL_B[@]}; l++)); do
-                NEW_WORKING_DIR=drift${TRUE_DEG_DRIFT[i]}/den${DENSITY[j]}/ldal${LDAL[k]}/modelb${PRED_DEG_MODEL_B[l]}/
+            for ((l = 0; l < ${#PRED_DEG_MODEL_B_RANGE[@]}; l++)); do
+                NEW_WORKING_DIR=drift${TRUE_DEG_DRIFT[i]}/den${DENSITY[j]}/ldal${LDAL[k]}/modelb${PRED_DEG_MODEL_B_RANGE[l]}/
                 pushd ${NEW_WORKING_DIR}
 
-                JOB_NAME=${JOB_TYPE}_drift${TRUE_DEG_DRIFT[i]}_den${DENSITY[j]}_ldal${LDAL[k]}_modelb${PRED_DEG_MODEL_B[l]}
+                JOB_NAME=${JOB_TYPE}_drift${TRUE_DEG_DRIFT[i]}_den${DENSITY[j]}_ldal${LDAL[k]}_modelb${PRED_DEG_MODEL_B_RANGE[l]}
 
                 # Run the job
                 # (The memory usage can go higher, but the --mem flag asks for minimum amount, and there's no upper limit)

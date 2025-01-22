@@ -8,7 +8,7 @@ SBATCH_SCRIPT_TEMPLATE=sbatch_dynamic_topo_dynamic_deg_run_ORACLE.sh
 ARGOSFILE=param_multi_robot_sim_1d_dynamic_degradation_ORACLE.argos
 
 # Parameters to test
-TRUE_DEG_DRIFT=(-25e-6)
+TRUE_DEG_DRIFT=(0 -10e-6)
 DENSITY=(1)
 WALL_POSITION=(2.452639)
 PRED_DEG_MODEL_B_RANGE=(0)
@@ -29,7 +29,7 @@ CORRECT_FILTER=false
 NUM_ROBOTS=15
 NUM_FLAWED_ROBOTS=${NUM_ROBOTS} # set all robots to be flawed so that the filter will be run for all of them
 NUM_TRIALS=1
-NUM_TICKS=30000
+NUM_TICKS=60000
 FILTER_PERIOD=5
 METHOD=ORACLE
 VARIANTS=("oracle")
@@ -81,7 +81,7 @@ for ((i = 0; i < ${#TRUE_DEG_DRIFT[@]}; i++)); do
 
                 # Run the job
                 # With each core running 1 trial, we should only need about 500M each per core, leaving about 1G left for the waiting core
-                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 01:30:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
+                sbatch -N 1 -n 32 --mem=16G -p short -o "log_%x_%j.out" -e "log_%x_%j.err" -J ${JOB_NAME} -t 02:00:00 --mail-user=kchin@wpi.edu --mail-type=fail,end ${SBATCH_SCRIPT_TEMPLATE}
             done
         done
     done

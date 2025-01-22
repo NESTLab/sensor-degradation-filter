@@ -90,8 +90,8 @@ TRUE_ACC=(999 800)
 TRUE_ACC_DEC=(0.999 0.8)
 ASSUMED_ACC=(null) # when flawed robots num is set to 0 this isn't applied
 ASSUMED_ACC_DEC=(null)
-TFR=(550 750 950)
-TFR_DEC=(0.55 0.75 0.95)
+TFR=(550 650 750 850 950)
+TFR_DEC=(0.55 0.65 0.75 0.85 0.95)
 SEEDS=(
     290436
     181119
@@ -125,7 +125,7 @@ SEEDS=(
     452015
 ) # the randomly pre-generated list of seeds (so that all the experiments are the same across the two variants)
 METHOD=ORACLE
-NUM_TICKS=30000
+NUM_TICKS=60000
 SPEED=14.14
 COMMS_PERIOD=5
 VERBOSITY=none

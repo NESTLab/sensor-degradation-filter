@@ -355,12 +355,6 @@ void KheperaIVDiffusionMotion::ControlStep()
 {
     ++tick_counter_;
 
-    if (tick_counter_ == sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize * sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks)
-    {
-        // Store the assumed accuracy for the very first step (so that we actually have the accuracy from one time step before in the later time steps)
-        prev_assumed_acc_ = sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"]; // update with the latest assumed accuracy
-    }
-
     // Move robot
     SetWheelSpeedsFromVector(ComputeDiffusionVector());
 
@@ -378,50 +372,60 @@ void KheperaIVDiffusionMotion::ControlStep()
             size_t dynamic_queue_size = collective_perception_algo_ptr_->GetParamsPtr()->MaxObservationQueueSize;
 
             // Check to see if dynamic queue size is used
-            if (sensor_degradation_filter_ptr_->GetParamsPtr()->UseDynamicObservationQueue && tick_counter_ > sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize * sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks)
+            if (sensor_degradation_filter_ptr_->GetParamsPtr()->UseDynamicObservationQueue &&
+                tick_counter_ >= sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize * ground_sensor_params_.GroundMeasurementPeriodTicks)
             {
-                // Collect the current degradation rate and fill ratio reference (i.e., the informed estimate)
-                previous_degradation_rates_and_fill_ratio_references_.push_back(std::pair(sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"] - prev_assumed_acc_,
-                                                                                          collective_perception_algo_ptr_->GetInformedVals().X));
-
-                // Maintain the fixed window size
-                if (previous_degradation_rates_and_fill_ratio_references_.size() > sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize)
+                // Check whether it's the first time we're calculating the dynamic queue size
+                if (tick_counter_ == sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize * ground_sensor_params_.GroundMeasurementPeriodTicks)
                 {
-                    previous_degradation_rates_and_fill_ratio_references_.pop_front(); // ensure the queue stays true to the desired window size
-                }
-                prev_assumed_acc_ = sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"]; // update with the latest assumed accuracy
-
-                // Compute the average values
-                averaged_deg_rates_and_fill_ratio_refs_ = std::reduce(previous_degradation_rates_and_fill_ratio_references_.begin(),
-                                                                      previous_degradation_rates_and_fill_ratio_references_.end(),
-                                                                      std::pair<Real, Real>(0.0, 0.0),
-                                                                      [](std::pair<Real, Real> left, std::pair<Real, Real> right)
-                                                                      {
-                                                                          return std::pair<Real, Real>(left.first + right.first, left.second + right.second);
-                                                                      });
-
-                averaged_deg_rates_and_fill_ratio_refs_ = {averaged_deg_rates_and_fill_ratio_refs_.first / previous_degradation_rates_and_fill_ratio_references_.size(),
-                                                           sensor_degradation_filter_ptr_->GetParamsPtr()->UseWeightedAvgInformedEstimates
-                                                               ? collective_perception_algo_ptr_->GetParamsPtr()->WeightedAverageInformedEstimate
-                                                               : averaged_deg_rates_and_fill_ratio_refs_.second / previous_degradation_rates_and_fill_ratio_references_.size()};
-
-                // Calculate dynamic queue size from the averaged values
-                if (std::abs(averaged_deg_rates_and_fill_ratio_refs_.first) < ZERO_APPROX)
-                {
-                    dynamic_queue_size = collective_perception_algo_ptr_->GetParamsPtr()->MaxObservationQueueSize;
+                    // Store the assumed accuracy for the very first time (so that we actually have the accuracy from one time step before in the later time steps)
+                    prev_assumed_acc_ = sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"]; // update with the latest assumed accuracy
                 }
                 else
                 {
-                    dynamic_queue_size = static_cast<int>(std::ceil(0.1 /
-                                                                    std::abs(sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks *
-                                                                             (2.0 * averaged_deg_rates_and_fill_ratio_refs_.second - 1.0) *
-                                                                             averaged_deg_rates_and_fill_ratio_refs_.first)));
+                    // Collect the current degradation rate and fill ratio reference (i.e., the informed estimate)
+                    previous_degradation_rates_and_fill_ratio_references_.push_back(std::pair((sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"] - prev_assumed_acc_) / ground_sensor_params_.GroundMeasurementPeriodTicks,
+                                                                                              collective_perception_algo_ptr_->GetInformedVals().X));
+
+                    // Maintain the fixed window size
+                    if (previous_degradation_rates_and_fill_ratio_references_.size() > sensor_degradation_filter_ptr_->GetParamsPtr()->DynamicObservationQueueWindowSize)
+                    {
+                        previous_degradation_rates_and_fill_ratio_references_.pop_front(); // ensure the queue stays true to the desired window size
+                    }
+                    prev_assumed_acc_ = sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc["b"]; // update with the latest assumed accuracy
+
+                    // Compute the average values
+                    averaged_deg_rates_and_fill_ratio_refs_ = std::reduce(previous_degradation_rates_and_fill_ratio_references_.begin(),
+                                                                          previous_degradation_rates_and_fill_ratio_references_.end(),
+                                                                          std::pair<Real, Real>(0.0, 0.0),
+                                                                          [](std::pair<Real, Real> left, std::pair<Real, Real> right)
+                                                                          {
+                                                                              return std::pair<Real, Real>(left.first + right.first, left.second + right.second);
+                                                                          });
+
+                    averaged_deg_rates_and_fill_ratio_refs_ = {averaged_deg_rates_and_fill_ratio_refs_.first / previous_degradation_rates_and_fill_ratio_references_.size(),
+                                                               sensor_degradation_filter_ptr_->GetParamsPtr()->UseWeightedAvgInformedEstimates
+                                                                   ? collective_perception_algo_ptr_->GetParamsPtr()->WeightedAverageInformedEstimate
+                                                                   : averaged_deg_rates_and_fill_ratio_refs_.second / previous_degradation_rates_and_fill_ratio_references_.size()};
+
+                    // Calculate dynamic queue size from the averaged values
+                    if (std::abs(averaged_deg_rates_and_fill_ratio_refs_.first) < ZERO_APPROX)
+                    {
+                        dynamic_queue_size = collective_perception_algo_ptr_->GetParamsPtr()->MaxObservationQueueSize;
+                    }
+                    else
+                    {
+                        dynamic_queue_size = static_cast<int>(std::ceil(0.02 /
+                                                                        std::abs(sensor_degradation_filter_ptr_->GetParamsPtr()->FilterActivationPeriodTicks *
+                                                                                 (2.0 * averaged_deg_rates_and_fill_ratio_refs_.second - 1.0) *
+                                                                                 averaged_deg_rates_and_fill_ratio_refs_.first)));
+                    }
                 }
                 collective_perception_algo_ptr_->GetParamsPtr()->AddToQueue(1 - ObserveTileColor(), dynamic_queue_size); // add to observation queue
             }
-            else
+            else // not using dynamic queue sizes
             {
-                collective_perception_algo_ptr_->GetParamsPtr()->AddToQueue(1 - ObserveTileColor(), -1); // not using dynamic queue sizes
+                collective_perception_algo_ptr_->GetParamsPtr()->AddToQueue(1 - ObserveTileColor(), -1);
             }
         }
         collective_perception_algo_ptr_->ComputeLocalEstimate(sensor_degradation_filter_ptr_->GetParamsPtr()->AssumedSensorAcc.at("b"),
