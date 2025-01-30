@@ -1172,6 +1172,7 @@ def plot_multix_boxplot_plotly(
     # Update layout for better visibility
     fig.update_layout(
         font_family="Times New Roman",
+        plot_bgcolor="rgb(245, 249, 252)",
         boxmode="group",
         boxgroupgap=0.1 if "boxgroupgap" not in kwargs else kwargs["boxgroupgap"],
         title=None if "title" not in kwargs or ("show_title" in kwargs and not kwargs["show_title"]) else kwargs["title"],
@@ -1210,6 +1211,7 @@ def plot_multix_boxplot_plotly(
             tickfont={"size": 25 if "x1_tick_font_size" not in kwargs else kwargs["x1_tick_font_size"]},
             ticklen=6,
             title=None if "x1_title" not in kwargs or ("show_x1" in kwargs and not kwargs["show_x1"]) else kwargs["x1_title"],
+            ticklabelstandoff=None if "x1_label_standoff" not in kwargs else kwargs["x1_label_standoff"],
             showticklabels=True if "show_x1" not in kwargs else kwargs["show_x1"],
             side="bottom" if "x1_side" not in kwargs else kwargs["x1_side"]
         ), # Explicit tick values and labels

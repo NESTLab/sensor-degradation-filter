@@ -355,6 +355,61 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
 
 
 ################################################################################
+# Reduce DataFrame based on some keyword and a range of `step_ind`
+################################################################################
+
+def reduce_rmsd_df_by_keyword_and_trial_ind_with_step_ind_range(df: pd.DataFrame, start_ind: int, end_ind: int, keyword: str, keyword_is_filter_specific: bool):
+    """Reduce the size of the DataFrame by computing descriptive statistics for each unique `trial_ind` and `keyword`.
+
+    This differs from `reduce_rmsd_df_by_keyword_and_trial_ind` in that you can choose the ranges of `step_ind`
+    to reduce the data to.
+
+    Args:
+        df: The DataFrame with columns `inf_est_rmsd` and `sensor_acc_rmsd`.
+        keyword: The parameter to group by (besides `trial_ind`) to compute stats from.
+
+    Return:
+        A reduced DataFrame containing the mean and variance of the range-specific RMSD data.
+    """
+
+    # Filter to specific range
+    filtered_df = df[
+        (df["step_ind"] >= start_ind) &
+        (df["step_ind"] < end_ind)
+    ]
+
+    # Check if the range isn't satisfied; still want to return a non-empty DataFrame
+    if filtered_df.empty:
+        filtered_df = df.copy(deep=True)
+        filtered_df["regular_inf_est_rmsd"] = np.nan
+        filtered_df["weighted_inf_est_rmsd"] = np.nan
+        filtered_df["sensor_acc_rmsd"] = np.nan
+
+    # Check if the keyword is filter specific
+    actual_keyword = ""
+
+    if keyword_is_filter_specific:
+        actual_keyword = "fsp_" + keyword
+        df[actual_keyword] = df["filter_specific_params"].apply(lambda x: x.get(keyword, None))
+    else:
+        actual_keyword = keyword
+
+    return filtered_df.groupby([keyword, "trial_ind"]).agg(
+        regular_inf_est_rmsd_mean=("regular_inf_est_rmsd", "mean"),
+        regular_inf_est_rmsd_var=("regular_inf_est_rmsd", lambda x: x.var(ddof=1)),
+        weighted_inf_est_rmsd_mean=("weighted_inf_est_rmsd", "mean"),
+        weighted_inf_est_rmsd_var=("weighted_inf_est_rmsd", lambda x: x.var(ddof=1)),
+        sensor_acc_rmsd_mean=("sensor_acc_rmsd", "mean"),
+        sensor_acc_rmsd_var=("sensor_acc_rmsd", lambda x: x.var(ddof=1)),
+        count=("regular_inf_est_rmsd", "count") # the count of inf_est_rmsd is the same as sensor_acc_rmsd
+    ).reset_index()
+
+################################################################################
+################################################################################
+
+
+
+################################################################################
 # Reduce DataFrame based on some keyword and either `step_ind` or `trial_ind`
 ################################################################################
 

@@ -23,6 +23,7 @@ llvmlite==0.43.0
 matplotlib==3.9.0
 matplotlib-inline==0.1.7
 msgpack==1.0.8
+narwhals==1.24.1
 nbformat==5.10.4
 ndindex==1.8
 nest-asyncio==1.6.0
@@ -36,7 +37,7 @@ parso==0.8.4
 pexpect==4.9.0
 pillow==10.3.0
 platformdirs==4.2.2
-plotly==5.22.0
+plotly==6.0.0
 prompt_toolkit==3.0.47
 psutil==6.0.0
 ptyprocess==0.7.0
@@ -51,7 +52,6 @@ pyzmq==26.0.3
 referencing==0.35.1
 rpds-py==0.18.1
 scipy==1.13.1
-sensor_degradation_filter_py @ file:///home/khaiyichin/research/sensor-degradation-filter
 six==1.16.0
 stack-data==0.6.3
 tables==3.9.2
