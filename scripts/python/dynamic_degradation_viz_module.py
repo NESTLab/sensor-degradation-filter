@@ -659,7 +659,7 @@ def plot_line_plotly(
 
     # Update layout for better visibility
     fig.update_layout(
-        plot_bgcolor="rgb(240, 242, 246)",
+        plot_bgcolor="rgb(245, 249, 252)",
         font_family="Times New Roman",
         title=None if "title" not in kwargs or ("show_title" in kwargs and not kwargs["show_title"]) else kwargs["title"],
         xaxis_title_standoff=10,  # Adjust space between axis title and axis labels
