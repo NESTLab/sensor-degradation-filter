@@ -31,6 +31,8 @@
 
 - Each `*DegradationJsonData` object contains data from multiple `num_flawed_robots` experiments (all trials of that experiment is included). The top-level key is `num_flawed_robots`. _E.g.,_ if there are two cases of `num_flawed_robots` within the same directory of JSON files, then all those files will be stored into one `*DegradationJsonData` object.
 
+- The `vicon_sdk` folder and its contents were copied from the [NESTLab/Vicon repository](https://github.com/NESTLab/Vicon/tree/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/vicon_sdk/Linux64).
+
 ### Analyzing dynamic degradation data
 - Procedure for analyzing the dynamic degradation data:
     1. Extract using `extract_dynamic_degradation_data.py`. This will generate a bunch of HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values.

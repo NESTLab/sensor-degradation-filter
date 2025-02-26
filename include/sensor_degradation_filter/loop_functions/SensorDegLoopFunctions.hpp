@@ -106,7 +106,7 @@ public:
      * @brief Setup experiment
      *
      */
-    void SetupExperiment();
+    virtual void SetupExperiment();
 
     /**
      * @brief Execute post step activities
@@ -124,7 +124,7 @@ public:
      * @brief Write data to disk
      *
      */
-    void SaveData();
+    virtual void SaveData();
 
     /**
      * @brief Check if experiment is over
@@ -150,7 +150,7 @@ public:
      */
     std::string ConvertDataToString(const std::vector<Real> &data);
 
-private:
+protected:
     /**
      * @brief Initialize a new JSON object
      *

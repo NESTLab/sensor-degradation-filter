@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<argos-configuration>
+
+    <!-- ************************* -->
+    <!-- * General configuration * -->
+    <!-- ************************* -->
+    <framework>
+        <!--
+        System configuration:
+        - threads: the number of slave threads to parallelize the
+          computation. For less than 100 robots thread management is not
+          beneficial, so here we set it to 0. When set to 0, it means that
+          the computation is not parallelized: the main thread does
+          everything.
+    -->
+        <system threads="0" />
+        <!--
+        Experiment configuration:
+        - length: total experiment time in seconds (0 means the experiment
+          has no time limit)
+        - ticks_per_second: number of ticks per second (int value)
+        - random_seed: seed of the main random number generator. If unset
+          or set to zero, this value is taken from the clock and a warning
+          message is displayed.
+    -->
+        <experiment length="100" ticks_per_second="10" random_seed="0" />
+    </framework>
+
+    <!-- *************** -->
+    <!-- * Controllers * -->
+    <!-- *************** -->
+
+    <controllers />
+        
+    <!-- ****************** -->
+    <!-- * Loop functions * -->
+    <!-- ****************** -->
+
+    <loop_functions
+        library="build_real_kheperaiv/src/loop_functions/libsensor_degradation_filter_loop_functions"
+        label="real_kheperaiv_experiment_loop_functions">
+        <vicon_server host="192.168.1.211" port="801"/>
+        <flawed_robots num="1" acc_b="0.75" acc_w="0.75" activate_filter_for_all="true" />
+        <path folder="data/temp" /> <!-- path to the output data and datetime in filename -->
+        <!-- Connect the object name (listed in the Vicon Tracker app) to the robot IP -->
+        <kheperaiv_ids>
+            <kheperaiv name="Khepera_6" address="192.168.1.206" />
+        </kheperaiv_ids>
+    </loop_functions>
+
+    <!-- *********************** -->
+    <!-- * Arena configuration * -->
+    <!-- *********************** -->
+    <!--
+      Here you place all the objects in the arena.
+      All linear measures are expressed in meters.
+      Angles are expressed in degrees.
+      The 'size' attribute contains the size of the arena around the
+      origin.
+      To get help about which entities are available, type at the command
+      prompt:
+ 
+      $ argos3 -q entities
+ 
+      and to get help about a specific entity (for instance, the box)
+ 
+      $ argos3 -q box
+  -->
+    <arena size="5, 5, 1" center="0,0,0.5">
+
+        <floor id="floor" source="image" path="argos/floor_qr_code_pattern_black_white.png" />
+
+        <!-- Place four boxes in a square to delimit the arena -->
+        <box id="wall_north" size="10,0.1,0.5" movable="false">
+            <body position="0,0.9273198961208501,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_south" size="10,0.1,0.5" movable="false">
+            <body position="0,-0.9273198961208501,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_east" size="0.1,10,0.5" movable="false">
+            <body position="0.9273198961208501,0,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_west" size="0.1,10,0.5" movable="false">
+            <body position="-0.9273198961208501,0,0" orientation="0,0,0" />
+        </box>
+
+        <!-- Place a foot-bot in the origin and bind it to the controller -->
+        <!-- <distribute>
+            <position
+                method="uniform"
+                min="-0.9273198961208501,-0.9273198961208501,0"
+                max="0.9273198961208501,0.9273198961208501,0" />
+            <orientation method="uniform" min="0,0,0" max="360,0,0" />
+            <entity quantity="20" max_trials="100" base_num="0">
+                <kheperaiv id="kiv" rab_data_size="50" rab_range="0.7">
+                    <controller config="kdmc" />
+                </kheperaiv>
+            </entity>
+        </distribute> -->
+    </arena>
+
+    <!-- ******************* -->
+    <!-- * Physics engines * -->
+    <!-- ******************* -->
+    <!--
+      In ARGoS, multiple physics engines can run at the same time.
+      In this section you say which engines to use for the experiment.
+      To know which engines are available, type at the command prompt:
+ 
+      $ argos3 -q physics_engines
+  -->
+    <physics_engines>
+        <!--
+        Use a 2D dynamics engine.
+    -->
+        <dynamics2d id="dyn2d" />
+    </physics_engines>
+
+    <!-- ********* -->
+    <!-- * Media * -->
+    <!-- ********* -->
+    <!--
+      Here you specify the media in use. Media allow robots to communicate.
+      In this experiment, robots do not communicate, so no media are
+      specified.
+      To know which media are available, type at the command prompt:
+ 
+      $ argos3 -q media
+  -->
+    <media>
+        <range_and_bearing id="rab" />
+        <led id="leds" />
+    </media>
+    <!-- ****************** -->
+    <!-- * Visualization * -->
+    <!-- ****************** -->
+    <!--
+      Here you specify which visualization to use.
+      You can also not specify a visualization at all, in which case ARGoS
+      will run without showing anything.
+      Having no visualization is useful when you run ARGoS in a batch of
+      experiments to collect statistics.
+      To know which visualizations are available, type at the command
+      prompt:
+ 
+      $ argos3 -q visualizations
+  -->
+    <visualization>
+        <qt-opengl>
+            <camera>
+                <placements>
+                    <placement index="0" position="0,0,8.14689" look_at="0,0,0" up="1,0,0" lens_focal_length="35" />
+                </placements>
+            </camera>
+        </qt-opengl>
+    </visualization>
+
+</argos-configuration>

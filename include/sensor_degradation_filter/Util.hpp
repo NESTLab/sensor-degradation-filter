@@ -187,7 +187,7 @@ private:
 /****************************************/
 /****************************************/
 
-RealNumberGenerator *CreateGenerator(TConfigurationNode &t_tree)
+inline RealNumberGenerator *CreateGenerator(TConfigurationNode &t_tree)
 {
     std::string strMethod;
     GetNodeAttribute(t_tree, "method", strMethod);
