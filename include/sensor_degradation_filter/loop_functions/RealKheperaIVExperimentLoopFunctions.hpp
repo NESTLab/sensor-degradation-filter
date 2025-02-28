@@ -7,6 +7,8 @@
 
 #include "vicon_sdk/DataStreamClient.h"
 #include "loop_functions/SensorDegLoopFunctions.hpp"
+#include "messages/RobotServerMessage.hpp"
+// #include "messages/ServerToRobotMessage.hpp"
 
 using namespace argos;
 using namespace nlohmann;
@@ -35,57 +37,39 @@ struct RobotInfo
           Options(std::move(options_str)) {};
 };
 
-struct Message
-{
-    UInt16 StartFlag;
-    CByteArray Payload;
-};
-
 class RealKheperaIVExperimentLoopFunctions : public SensorDegLoopFunctions
 {
 public:
-    virtual ~RealKheperaIVExperimentLoopFunctions()
-    {
-        // Set shutdown flag to stop the listener thread
-        shutdown_flag_.store(true, std::memory_order_release);
-
-        ::close(server_socket_);
-    }
+    virtual ~RealKheperaIVExperimentLoopFunctions();
 
     virtual void Init(TConfigurationNode &t_tree) override;
 
-    inline void Reset() override { THROW_ARGOSEXCEPTION("Reset functionality is not available for experiments with real robots."); }
-
-    virtual void SetupExperiment() override;
+    inline void Reset() override { THROW_ARGOSEXCEPTION("`Reset` functionality is simulated and is not available for real robot experiments."); }
 
     virtual void PreStep();
 
-    virtual void PostStep() override;
+    // virtual void PostStep() override;
 
     virtual void PostExperiment() override;
 
-    // virtual void SaveData() override;
+    virtual void SetupExperiment() override;
 
-    virtual CColor GetFloorColor() = delete;
-
-    /**
-     * @brief Convert the data into a string so that it can be stored into JSON later
-     *
-     * @param data Vector of Real values
-     * @return Data string
-     */
-    std::string ConvertDataToString(const std::vector<Real> &data);
+    virtual CColor GetFloorColor(const CVector2 &c_position_on_plane) override { THROW_ARGOSEXCEPTION("`GetFloorColor` functionality is simulated and is not available for real robot experiments."); }
 
 protected:
     void ConnectToViconServer(std::string host_ip_str, SInt32 port_number);
 
-    void StartServer(SInt32 port_number);
+    void StartARGoSServer(SInt32 port_number);
 
     void AcceptConnections();
 
     void SendPoseInfoToRobots();
 
-    void ListenToRobot(SInt32 client_socket, const std::string &client_ip);
+    void RobotThreadRx(SInt32 client_socket, const std::string &client_ip);
+
+    void RobotThreadTx(SInt32 client_socket, const std::string &client_ip);
+
+    void ViconThreadRx();
 
     void GetRobotTypeFromName(const std::string &original_name_str,
                               std::string &type_str,
@@ -109,27 +93,25 @@ private:
 
     std::mutex pose_mutex_; // mutex to protect robot_name_info_map_
 
-    std::unordered_map<std::string, SInt32> robot_ip_socket_map_;
+    std::unordered_map<std::string, SInt32> robot_ip_socket_map_; // map that connects robot IP to its TCP socket
 
-    std::unordered_map<std::string, std::vector<std::string>> robot_ip_data_map_;
+    std::unordered_map<std::string, std::vector<std::string>> robot_ip_data_map_; // map that connects robot IP to its logged data
 
-    std::unordered_map<std::string, std::string> robot_ip_name_map_;
+    std::unordered_map<std::string, std::string> robot_ip_name_map_; // map that connects robot IP to its network name
 
-    std::unordered_map<std::string, RobotInfo> robot_name_info_map_;
+    std::unordered_map<std::string, RobotInfo> robot_name_info_map_; // map that connects robot name to its pose information
 
-    std::vector<std::thread> robot_thread_vec_;
+    size_t robot_to_server_msg_size_; // size in bytes the message packet from the robot to the server
 
-    size_t robot_data_size_;
+    size_t server_to_robot_msg_size_; // size in bytes the message packet from the server to the robot
 
-    size_t num_robots_;
+    UInt8 robot_start_flag_ = 0; // flag to indicate whether the robot should start moving (i.e., whether the experiment has begun)
 
-    UInt8 robot_start_flag_ = 0;
+    SInt32 server_socket_; // ARGoS socket server
 
-    SInt32 server_socket_;
+    SInt32 num_connected_robots_ = 0; // amount of robots connected to the ARGoS server
 
-    SInt32 num_connected_robots_ = 0;
-
-    SInt32 expected_num_robot_connections_ = 0;
+    SInt32 expected_num_robot_connections_ = 0; // number of robots to expected to connect
 };
 
 #endif

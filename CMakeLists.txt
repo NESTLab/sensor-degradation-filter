@@ -21,4 +21,5 @@ add_subdirectory(src) # add source directory
 
 if(BUILD_REAL_KHEPERAIV_EXPERIMENT_LOOP_FUNCTIONS)
     add_subdirectory(vicon_sdk)
+    add_subdirectory(real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv/src/messages)
 endif()

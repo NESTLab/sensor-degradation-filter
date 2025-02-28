@@ -23,7 +23,7 @@
           or set to zero, this value is taken from the clock and a warning
           message is displayed.
     -->
-        <experiment length="100" ticks_per_second="10" random_seed="0" />
+        <experiment length="20" ticks_per_second="10" random_seed="0" />
     </framework>
 
     <!-- *************** -->
@@ -41,7 +41,7 @@
         label="real_kheperaiv_experiment_loop_functions">
         <vicon_server address="192.168.1.211" port="801"/>
         <!-- argos_server: port is the desired port number you want to use -->
-        <argos_server port="" num_robots="6" robot_data_size_in_bytes="64"/>
+        <argos_server port="8204" robot_to_server_msg_size="256" server_to_robot_msg_size="96"/> <!-- port is 200C in hex -->
         <flawed_robots num="1" acc_b="0.75" acc_w="0.75" activate_filter_for_all="true" />
         <path folder="data/temp" /> <!-- path to the output data and datetime in filename -->
         <!-- Connect the object name (listed in the Vicon Tracker app) to the robot IP -->

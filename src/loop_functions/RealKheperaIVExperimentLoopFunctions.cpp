@@ -30,33 +30,44 @@
 
 #include "loop_functions/RealKheperaIVExperimentLoopFunctions.hpp"
 
+RealKheperaIVExperimentLoopFunctions::~RealKheperaIVExperimentLoopFunctions()
+{
+    // Set shutdown flag to stop the listener thread
+    shutdown_flag_.store(true, std::memory_order_release);
+
+    // Close sockets
+    ::close(server_socket_);
+
+    for (auto itr = robot_ip_socket_map_.begin(); itr != robot_ip_socket_map_.end(); ++itr)
+    {
+        LOG << "Closing connection with robot " << itr->second << " at " << itr->first << std::endl;
+
+        ::close(itr->second);
+    }
+
+    // Disconnect the Vicon client
+    // Code obtained from
+    // https://github.com/NESTLab/Vicon/blob/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/argos3/plugins/simulator/physics_engines/tracking/tracking_updaters/vicon_updater.cpp#L113
+    LOG << "Disconnecting from Vicon server." << std::endl;
+    vicon_client_.Disconnect();
+
+    timespec sleep_ts{};
+    sleep_ts.tv_sec = 0;
+    sleep_ts.tv_nsec = 100000000;
+
+    while (vicon_client_.IsConnected().Connected)
+    {
+        LOGERR << "Vicon client is still connected, reattempting to disconnect." << std::endl;
+        LOGERR.Flush();
+        vicon_client_.Disconnect();
+        nanosleep(&sleep_ts, nullptr);
+    }
+}
+
 void RealKheperaIVExperimentLoopFunctions::Init(TConfigurationNode &t_tree)
 {
-    /*
-        The code here is adapted from
-        https://github.com/NESTLab/Vicon/blob/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/argos3/plugins/simulator/physics_engines/tracking/tracking_updaters/vicon_updater.cpp
-    */
 
-    // Connect to the Vicon DataStream server
-    std::string vicon_addr_str;
-    SInt32 vicon_port_number;
-    GetNodeAttributeOrDefault(GetNode(t_tree, "vicon_server"), "address", vicon_addr_str, std::string("192.168.1.211"));
-    GetNodeAttributeOrDefault(GetNode(t_tree, "vicon_server"), "port", vicon_port_number, 801);
-
-    ConnectToViconServer(vicon_addr_str, vicon_port_number);
-
-    // Create a server for robots to connect
-    SInt32 server_port_number;
-    GetNodeAttribute(GetNode(t_tree, "argos_server"), "port", server_port_number);
-    GetNodeAttribute(GetNode(t_tree, "argos_server"), "num_robots", expected_num_robot_connections_);
-    GetNodeAttribute(GetNode(t_tree, "argos_server"), "robot_data_size_in_bytes", robot_data_size_);
-
-    StartServer(server_port_number);
-
-    /* Wait to connect */
-    // TODO: is it connected at this point? How to check? Is `StartServer` blocking (which is what we want, so that we don't proceed until all intended robots are onboard)
-
-    // Iterate over child elements with name "kheperaiv"
+    // Iterate over child elements with name "kheperaiv" to record all intended robots
     TConfigurationNodeIterator kheperaiv_ids_itr;
     std::string name, addr;
     for (kheperaiv_ids_itr = kheperaiv_ids_itr.begin(&GetNode(t_tree, "kheperaiv_ids"));
@@ -74,10 +85,33 @@ void RealKheperaIVExperimentLoopFunctions::Init(TConfigurationNode &t_tree)
         robot_ip_socket_map_[addr];
         robot_ip_data_map_[addr];
     }
+
+    expected_num_robot_connections_ = robot_ip_name_map_.size();
+
+    // Connect to the Vicon DataStream server
+    std::string vicon_addr_str;
+    SInt32 vicon_port_number;
+    GetNodeAttributeOrDefault(GetNode(t_tree, "vicon_server"), "address", vicon_addr_str, std::string("192.168.1.211"));
+    GetNodeAttributeOrDefault(GetNode(t_tree, "vicon_server"), "port", vicon_port_number, 801);
+
+    ConnectToViconServer(vicon_addr_str, vicon_port_number);
+
+    // Create a server for robots to connect
+    SInt32 server_port_number;
+    GetNodeAttribute(GetNode(t_tree, "argos_server"), "port", server_port_number);
+    GetNodeAttribute(GetNode(t_tree, "argos_server"), "robot_to_server_msg_size", robot_to_server_msg_size_);
+    GetNodeAttribute(GetNode(t_tree, "argos_server"), "server_to_robot_msg_size", server_to_robot_msg_size_);
+
+    StartARGoSServer(server_port_number); // starts the ARGoS server to accept connections from the robots; will block until all robots are connected
 }
 
 void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vicon_addr_str, SInt32 port_number)
 {
+    /*
+        The code here is adapted from
+        https://github.com/NESTLab/Vicon/blob/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/argos3/plugins/simulator/physics_engines/tracking/tracking_updaters/vicon_updater.cpp
+    */
+
     struct timespec ts;
     ts.tv_sec = 0;
     ts.tv_nsec = 100000000; // .1 sec sleep
@@ -107,6 +141,7 @@ void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vico
                              << "Server at " << vicon_addr_str);
 
     LOG << "Successfully connected." << std::endl;
+    LOG.Flush();
 
     vicon_client_.SetStreamMode(ViconSDK::StreamMode::ClientPull);
     vicon_client_.SetAxisMapping(ViconSDK::Direction::Forward,
@@ -116,9 +151,28 @@ void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vico
     vicon_client_.EnableMarkerData();  // necessary?
 
     nanosleep(&ts, nullptr); // necessary?
+
+    // Spawn a thread to get poses from the robots
+    std::thread vicon_rx_thread(&RealKheperaIVExperimentLoopFunctions::ViconThreadRx, this);
+    vicon_rx_thread.detach();
 }
 
-void RealKheperaIVExperimentLoopFunctions::StartServer(SInt32 port_number)
+void RealKheperaIVExperimentLoopFunctions::ViconThreadRx()
+{
+    std::cout << "Receiving pose information from the Vicon server." << std::endl;
+    std::cout << std::flush;
+
+    while (!shutdown_flag_.load(std::memory_order_acquire))
+    {
+        // Get robot poses from the Vicon server
+        CollectTrackedRobotPoses();
+
+        // Run thread every 10 ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
+void RealKheperaIVExperimentLoopFunctions::StartARGoSServer(SInt32 port_number)
 {
     // Create server socket
     server_socket_ = ::socket(AF_INET, SOCK_STREAM, 0); // automatic protocol is chosen with 0
@@ -132,11 +186,23 @@ void RealKheperaIVExperimentLoopFunctions::StartServer(SInt32 port_number)
     ::sockaddr_in server_addr{};
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;    // Accept connections on any network interface
-    server_addr.sin_port = ::htons(port_number); // Convert port to network byte order (implicitly converting to SInt16)
+    server_addr.sin_port = ::htons(port_number); // Convert port to network byte order (implicitly converting to SInt32)
 
     if (::bind(server_socket_, (struct ::sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        THROW_ARGOSEXCEPTION("Error binding socket server: " << ::strerror(errno));
+        THROW_ARGOSEXCEPTION("Error binding socket server at port number " << port_number << ": " << ::strerror(errno));
+    }
+
+    const SInt32 enable = 1;
+
+    if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) < 0)
+    {
+        perror("setsockopt(SO_REUSEADDR) failed");
+    }
+
+    if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable)) < 0)
+    {
+        perror("setsockopt(SO_REUSEPORT) failed");
     }
 
     // Start listening for connections (max 5 queued connections)
@@ -145,17 +211,18 @@ void RealKheperaIVExperimentLoopFunctions::StartServer(SInt32 port_number)
         THROW_ARGOSEXCEPTION("Error marking server socket as passive (to listen to incoming connection requests): " << ::strerror(errno));
     }
 
-    LOG << "Server started on port " << port_number << ". Waiting for connections...\n";
+    LOG << "Server started on port " << port_number << std::endl;
+    LOG.Flush();
 
-    // Start a separate thread to accept connections
-    std::thread accept_thread(&RealKheperaIVExperimentLoopFunctions::AcceptConnections, this);
-
-    // Wait for the accept thread to finish
-    accept_thread.join();
+    // Accept connections from robots
+    AcceptConnections();
 }
 
 void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
 {
+    LOG << "Waiting for connections..." << std::endl;
+    LOG.Flush();
+
     while (num_connected_robots_ < expected_num_robot_connections_)
     {
         ::sockaddr_in client_addr{};
@@ -174,34 +241,120 @@ void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
 
         // Increment the connected robot counter and store the socket
         ++num_connected_robots_;
-        robot_ip_socket_map_[client_ip] = client_socket;
+        {
+            std::lock_guard<std::mutex> lock(pose_mutex_);
+            robot_ip_socket_map_[client_ip] = client_socket;
+        }
 
-        LOG << "Robot connected from IP: " << client_ip << ". Total connected: " << num_connected_robots_ + 1 << std::endl;
+        LOG << "Robot connected from IP: " << client_ip << ". Total connected: " << num_connected_robots_ << std::endl;
 
-        // Once a robot connects, spawn a new thread to handle communication with it
-        std::thread listener_thread(&RealKheperaIVExperimentLoopFunctions::ListenToRobot, this, client_socket, client_ip);
-        listener_thread.detach();
+        // Spawn a new receiving and sending threads
+        std::thread rx_thread(&RealKheperaIVExperimentLoopFunctions::RobotThreadRx, this, client_socket, client_ip);
+        std::thread tx_thread(&RealKheperaIVExperimentLoopFunctions::RobotThreadTx, this, client_socket, client_ip);
+        rx_thread.detach();
+        tx_thread.detach();
     }
 
     // Once the required number of robots are connected, stop accepting new connections
     LOG << "Max robots connected. Stopping connection acceptance." << std::endl;
 }
 
-void RealKheperaIVExperimentLoopFunctions::ListenToRobot(SInt32 client_socket, const std::string &client_ip)
+void RealKheperaIVExperimentLoopFunctions::RobotThreadTx(SInt32 client_socket, const std::string &client_ip)
 {
-    UInt8 *buffer = new UInt8[robot_data_size_];
-    ssize_t bytes_received;
-    UInt32 num_elements_in_data;
-    CByteArray received_data;
+    // Define transmission related variables
+    RobotServerMessage data_to_send;
+    CByteArray byte_arr;
+    UInt8 *send_buffer = new UInt8[server_to_robot_msg_size_];
+    UInt8 *buffer_ptr = send_buffer; // create a pointer alias for traversing through the buffer
+    ssize_t remaining_size, bytes_sent;
 
+    // Define data related variables
+    UInt8 start_bit = 0;
+    CRadians z_rot, y_rot, x_rot;
+    Real x, y;
+    std::string robot_name;
+
+    std::cout << "Sending data to " << client_ip << std::endl;
+    std::cout << std::flush;
+
+    while (!shutdown_flag_.load(std::memory_order_acquire))
+    {
+        {
+            std::lock_guard<std::mutex> lock(pose_mutex_);
+
+            robot_name = robot_ip_name_map_[client_ip];
+
+            // Extract the Euler angles of the robot's orientation (originally in quaternion)
+            robot_name_info_map_[robot_name].RobotOrientation.ToEulerAngles(z_rot, y_rot, x_rot);
+
+            // Extract linear positions
+            x = robot_name_info_map_[robot_name].RobotPosition.GetX();
+            y = robot_name_info_map_[robot_name].RobotPosition.GetY();
+            start_bit = robot_start_flag_;
+        }
+
+        // Serialize data
+        byte_arr << start_bit;        // start flag
+        byte_arr << robot_name;       // robot name
+        byte_arr << x;                // robot x
+        byte_arr << y;                // robot y
+        byte_arr << z_rot.GetValue(); // robot theta
+
+        data_to_send.PopulateMessage(byte_arr);
+        data_to_send.Serialize(buffer_ptr);
+
+        // Ensure that the buffer is completely sent
+        remaining_size = server_to_robot_msg_size_;
+
+        while (remaining_size > 0)
+        {
+            bytes_sent = ::send(client_socket, buffer_ptr, remaining_size, 0);
+
+            if (bytes_sent < 0)
+            {
+                THROW_ARGOSEXCEPTION("Error sending information to " << client_ip << ": " << ::strerror(errno));
+            }
+
+            remaining_size -= bytes_sent;
+            buffer_ptr += bytes_sent;
+        }
+
+        // Reset pointer position to the start of the buffer
+        buffer_ptr = send_buffer;
+
+        // Clean up
+        data_to_send.CleanUp();
+        byte_arr.Clear();
+
+        // Run thread in 20 Hz
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    delete[] send_buffer;
+}
+
+void RealKheperaIVExperimentLoopFunctions::RobotThreadRx(SInt32 client_socket, const std::string &client_ip)
+{
+    // Define transmission related variables
+    RobotServerMessage data_received;
+    CByteArray byte_arr;
+    UInt8 *receive_buffer = new UInt8[robot_to_server_msg_size_];
+    UInt8 *buffer_ptr = receive_buffer; // create a pointer alias for traversing through the buffer
+    ssize_t remaining_size, bytes_received;
+
+    // Define data related variables
     std::vector<Real> robot_data_vec;
+    UInt16 num_data_elements;
+
+    std::cout << "Receiving data from " << client_ip << std::endl;
+    std::cout << std::flush;
 
     /*
-        Brief explanation of `bytes_received = ::recv(client_socket, buffer, robot_data_size_, 0);`:
+        Brief explanation of `bytes_received = ::recv(client_socket, buffer_ptr, remaining_size, 0);`:
 
         client_socket: The socket from which data is received.
-        buffer: A pointer to the memory where received data will be stored.
-        robot_data_size_: The maximum number of bytes we expect to receive.
+        buffer_ptr: A pointer to the memory where received data will be stored.
+        remaining_size: The maximum number of (remaining) bytes we expect to receive.
         0: Flags (we use 0 for default behavior).
         bytes_received: The actual number of bytes received from the socket.
 
@@ -209,37 +362,44 @@ void RealKheperaIVExperimentLoopFunctions::ListenToRobot(SInt32 client_socket, c
 
     while (!shutdown_flag_.load(std::memory_order_acquire))
     {
-        // Ensure that the buffer is completely empty (recv() should overwrite it anyway, but just in case)
-        ::memset(buffer, 0, robot_data_size_);
+        remaining_size = robot_to_server_msg_size_;
 
-        // Receive data from the robot
-        bytes_received = ::recv(client_socket, buffer, robot_data_size_, 0);
+        buffer_ptr = receive_buffer; // reset buffer_ptr to the start of the buffer
 
-        // Check if the connection is closed (0 bytes received)
-        if (bytes_received == 0)
+        // Keep receiving until the complete data is received
+        while (remaining_size > 0)
         {
-            THROW_ARGOSEXCEPTION("Robot " << client_ip << " disconnected.");
+            bytes_received = ::recv(client_socket, buffer_ptr, remaining_size, 0);
+
+            if (bytes_received < 0)
+            {
+                THROW_ARGOSEXCEPTION("Error receiving data from " << client_ip << ": " << strerror(errno));
+            }
+
+            remaining_size -= bytes_received;
+            buffer_ptr += bytes_received;
         }
 
-        // Check for errors during receiving data
-        if (bytes_received < 0)
+        // Reset pointer position to the start of the buffer
+        buffer_ptr = receive_buffer;
+
+        // Deserialize data
+        data_received.Deserialize(buffer_ptr);
+
+        byte_arr = data_received.GetPayload();
+
+        byte_arr >> num_data_elements; // get the number of elements in the data vector
+
+        robot_data_vec.resize(num_data_elements);
+
+        std::cout << "debug ";
+        for (auto itr = robot_data_vec.begin(); itr != robot_data_vec.end(); ++itr)
         {
-            THROW_ARGOSEXCEPTION("Error receiving data from robot " << client_ip);
+            byte_arr >> (*itr);
+            std::cout << *itr << " ";
         }
-
-        // Store the received data
-        received_data = CByteArray(buffer, bytes_received);
-
-        // Extract the number of elements
-        received_data >> num_elements_in_data;
-
-        // Resize vector to hold received floats
-        robot_data_vec.resize(num_elements_in_data);
-
-        for (size_t i = 0; i < num_elements_in_data; ++i)
-        {
-            received_data >> robot_data_vec[i];
-        }
+        std::cout << std::endl;
+        std::cout << std::flush;
 
         // Store the data
         {
@@ -247,15 +407,15 @@ void RealKheperaIVExperimentLoopFunctions::ListenToRobot(SInt32 client_socket, c
             robot_ip_data_map_[client_ip].push_back(ConvertDataToString(robot_data_vec));
         }
 
-        // Clear the vector
+        // Clean up
+        data_received.CleanUp();
         robot_data_vec.clear();
+
+        // Run thread in 20 Hz
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    // After exiting the loop, close the socket
-    LOG << "Closing connection with robot " << client_ip << std::endl;
-    ::close(client_socket); // close the socket to release resources
-
-    delete[] buffer;
+    delete[] receive_buffer;
 }
 
 void RealKheperaIVExperimentLoopFunctions::CollectTrackedRobotPoses()
@@ -266,8 +426,6 @@ void RealKheperaIVExperimentLoopFunctions::CollectTrackedRobotPoses()
     */
     std::string subject_name, segment_name, robot_name, robot_type, robot_options;
     UInt16 subject_count, segment_count;
-
-    robot_name_info_map_.clear();
 
     vicon_client_.GetFrame();
 
@@ -315,14 +473,18 @@ void RealKheperaIVExperimentLoopFunctions::CollectTrackedRobotPoses()
                 GetRobotTypeFromName(segment_name, robot_type, robot_name, robot_options);
 
                 // Store the robot info (pose and orientation)
-                if (robot_name_info_map_.find(robot_name) != robot_name_info_map_.end())
                 {
                     std::lock_guard<std::mutex> lock(pose_mutex_);
-                    robot_name_info_map_[robot_name] = RobotInfo(robot_type, robot_name, origin, rotation, robot_options);
-                }
-                else
-                {
-                    THROW_ARGOSEXCEPTION("Robot name: " << robot_name << " from the Vicon server not found in the ARGoS server. Did you add it to the .argos file?");
+
+                    // Ensure that the robot names are not erroneous (as a sanity check); the unordered map is initialized in Init()
+                    if (robot_name_info_map_.find(robot_name) != robot_name_info_map_.end())
+                    {
+                        robot_name_info_map_[robot_name] = RobotInfo(robot_type, robot_name, origin, rotation, robot_options);
+                    }
+                    else
+                    {
+                        THROW_ARGOSEXCEPTION("Robot name: " << robot_name << " from the Vicon server not found in the ARGoS server. Did you add it to the .argos file?");
+                    }
                 }
             }
         }
@@ -356,57 +518,46 @@ void RealKheperaIVExperimentLoopFunctions::GetRobotTypeFromName(const std::strin
     std::getline(ss_name, type_str, '_');
 }
 
-void RealKheperaIVExperimentLoopFunctions::SendPoseInfoToRobots()
+void RealKheperaIVExperimentLoopFunctions::SetupExperiment()
 {
-    std::lock_guard<std::mutex> lock(pose_mutex_);
+    // id_data_str_map_ = RobotIdDataStrMap();
 
-    CByteArray data;
-    CRadians z_rot, y_rot, x_rot;
+    // InitializeJSON();
 
-    // Populate and send the data
-    for (auto itr = robot_ip_name_map_.begin(); itr != robot_ip_name_map_.end(); ++itr)
+    // Collect data at the zero-th time step
+    for (size_t i = 0; i < exp_params_.NumRobots; ++i)
     {
-        // Extract the Euler angles of the robot's orientation (originally in quaternion)
-        robot_name_info_map_[itr->second].RobotOrientation.ToEulerAngles(z_rot, y_rot, x_rot);
-
-        data << robot_start_flag_;                                      // start flag
-        data << itr->second;                                            // robot name
-        data << robot_name_info_map_[itr->second].RobotPosition.GetX(); // robot x
-        data << robot_name_info_map_[itr->second].RobotPosition.GetY(); // robot y
-        data << z_rot.GetValue();                                       // robot theta
-
-        if (::send(robot_ip_socket_map_[itr->first], data.ToCArray(), data.Size(), 0))
-        {
-            THROW_ARGOSEXCEPTION("Error sending information to " << itr->second << " at " << itr->first);
-        }
+        // XXXXXXXXXXXXXXX
+        // Convert and store data string
+        // id_data_str_map_[kheperaiv_entity.GetId()].push_back(ConvertDataToString(controller.GetData()));
     }
 }
 
 void RealKheperaIVExperimentLoopFunctions::PreStep()
 {
     // Raise flag to indicate starting of experiment to permit robot operation
-    if (robot_start_flag_ != 1)
     {
-        LOG << "Experiment started, robot will now begin operation." << std::endl;
-        robot_start_flag_ = UInt8(1);
+        std::lock_guard<std::mutex> lock(pose_mutex_);
+        if (robot_start_flag_ != 1)
+        {
+            LOG << "Experiment started, robots will now begin operation." << std::endl;
+            robot_start_flag_ = UInt8(1);
+        }
     }
-
-    // Get the robot poses
-    CollectTrackedRobotPoses(); // TODO: PUT THIS INTO A SENDER THREAD
-
-    // Send the poses and operation flag
-    SendPoseInfoToRobots(); // TODO: PUT THIS IN A SENDER THREAD SO THAT WE CAN SEND MORE OFTEN AT 100HZ
-}
-
-void RealKheperaIVExperimentLoopFunctions::PostStep()
-{
-    // Process the collected data
 }
 
 void RealKheperaIVExperimentLoopFunctions::PostExperiment()
 {
-    // Save data
+    LOG << "Experiment completed." << std::endl;
+
     // Send the stop flag
+    {
+        std::lock_guard<std::mutex> lock(pose_mutex_);
+        robot_start_flag_ = UInt8(0);
+    }
+
+    // Save data
+    // SaveData();
 }
 
 REGISTER_LOOP_FUNCTIONS(RealKheperaIVExperimentLoopFunctions, "real_kheperaiv_experiment_loop_functions")

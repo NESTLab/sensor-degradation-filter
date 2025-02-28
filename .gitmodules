@@ -1,0 +1,3 @@
+[submodule "real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv"]
+	path = real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv
+	url = git@github.com:khaiyichin/sensor-degradation-filter-real-kheperaiv.git
