@@ -40,7 +40,7 @@ RealKheperaIVExperimentLoopFunctions::~RealKheperaIVExperimentLoopFunctions()
 
     for (auto itr = robot_ip_socket_map_.begin(); itr != robot_ip_socket_map_.end(); ++itr)
     {
-        LOG << "Closing connection with robot " << itr->second << " at " << itr->first << std::endl;
+        LOG << "[INFO] Closing connection with robot " << itr->second << " at " << itr->first << std::endl;
 
         ::close(itr->second);
     }
@@ -48,7 +48,7 @@ RealKheperaIVExperimentLoopFunctions::~RealKheperaIVExperimentLoopFunctions()
     // Disconnect the Vicon client
     // Code obtained from
     // https://github.com/NESTLab/Vicon/blob/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/argos3/plugins/simulator/physics_engines/tracking/tracking_updaters/vicon_updater.cpp#L113
-    LOG << "Disconnecting from Vicon server." << std::endl;
+    LOG << "[INFO] Disconnecting from Vicon server." << std::endl;
     vicon_client_.Disconnect();
 
     timespec sleep_ts{};
@@ -69,6 +69,7 @@ void RealKheperaIVExperimentLoopFunctions::Init(TConfigurationNode &t_tree)
 
     // Iterate over child elements with name "kheperaiv" to record all intended robots
     TConfigurationNodeIterator kheperaiv_ids_itr;
+
     std::string name, addr;
     for (kheperaiv_ids_itr = kheperaiv_ids_itr.begin(&GetNode(t_tree, "kheperaiv_ids"));
          kheperaiv_ids_itr != kheperaiv_ids_itr.end();
@@ -84,9 +85,14 @@ void RealKheperaIVExperimentLoopFunctions::Init(TConfigurationNode &t_tree)
         robot_name_info_map_[name];
         robot_ip_socket_map_[addr];
         robot_ip_data_map_[addr];
+
+        sorted_robot_ids_.push_back(name);
     }
 
     expected_num_robot_connections_ = robot_ip_name_map_.size();
+
+    // Sort the robot IDs
+    std::sort(sorted_robot_ids_.begin(), sorted_robot_ids_.end());
 
     // Connect to the Vicon DataStream server
     std::string vicon_addr_str;
@@ -103,6 +109,9 @@ void RealKheperaIVExperimentLoopFunctions::Init(TConfigurationNode &t_tree)
     GetNodeAttribute(GetNode(t_tree, "argos_server"), "server_to_robot_msg_size", server_to_robot_msg_size_);
 
     StartARGoSServer(server_port_number); // starts the ARGoS server to accept connections from the robots; will block until all robots are connected
+
+    // Setup experiment parameters for data logging
+    InitializeExperimentalParameters(t_tree);
 }
 
 void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vicon_addr_str, SInt32 port_number)
@@ -120,7 +129,7 @@ void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vico
 
     std::string full_hostname = vicon_addr_str + ":" + std::to_string(port_number);
 
-    LOG << "Connecting to Vicon DataStream server at " << full_hostname << std::endl;
+    LOG << "[INFO] Connecting to Vicon DataStream server at " << full_hostname << std::endl;
     LOG.Flush();
 
     UInt8 retries = 10;
@@ -133,14 +142,14 @@ void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vico
         }
         nanosleep(&ts, nullptr);
         retries--;
-        LOG << "Failed to connect. " << retries << "retries remaining" << std::endl;
+        LOG << "[INFO] Failed to connect. " << retries << "retries remaining" << std::endl;
         LOG.Flush();
     }
     if (!vicon_client_.IsConnected().Connected)
         THROW_ARGOSEXCEPTION("Could not reconnect to Vicon Datastream "
                              << "Server at " << vicon_addr_str);
 
-    LOG << "Successfully connected." << std::endl;
+    LOG << "[INFO] Successfully connected." << std::endl;
     LOG.Flush();
 
     vicon_client_.SetStreamMode(ViconSDK::StreamMode::ClientPull);
@@ -159,9 +168,6 @@ void RealKheperaIVExperimentLoopFunctions::ConnectToViconServer(std::string vico
 
 void RealKheperaIVExperimentLoopFunctions::ViconThreadRx()
 {
-    std::cout << "Receiving pose information from the Vicon server." << std::endl;
-    std::cout << std::flush;
-
     while (!shutdown_flag_.load(std::memory_order_acquire))
     {
         // Get robot poses from the Vicon server
@@ -211,7 +217,7 @@ void RealKheperaIVExperimentLoopFunctions::StartARGoSServer(SInt32 port_number)
         THROW_ARGOSEXCEPTION("Error marking server socket as passive (to listen to incoming connection requests): " << ::strerror(errno));
     }
 
-    LOG << "Server started on port " << port_number << std::endl;
+    LOG << "[INFO] Server started on port " << port_number << std::endl;
     LOG.Flush();
 
     // Accept connections from robots
@@ -220,7 +226,7 @@ void RealKheperaIVExperimentLoopFunctions::StartARGoSServer(SInt32 port_number)
 
 void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
 {
-    LOG << "Waiting for connections..." << std::endl;
+    LOG << "[INFO] Waiting for connections..." << std::endl;
     LOG.Flush();
 
     while (num_connected_robots_ < expected_num_robot_connections_)
@@ -246,7 +252,7 @@ void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
             robot_ip_socket_map_[client_ip] = client_socket;
         }
 
-        LOG << "Robot connected from IP: " << client_ip << ". Total connected: " << num_connected_robots_ << std::endl;
+        LOG << "[INFO] Robot connected from IP: " << client_ip << ". Total connected: " << num_connected_robots_ << std::endl;
 
         // Spawn a new receiving and sending threads
         std::thread rx_thread(&RealKheperaIVExperimentLoopFunctions::RobotThreadRx, this, client_socket, client_ip);
@@ -256,7 +262,7 @@ void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
     }
 
     // Once the required number of robots are connected, stop accepting new connections
-    LOG << "Max robots connected. Stopping connection acceptance." << std::endl;
+    LOG << "[INFO] All expected robots connected. Stopping connection acceptance." << std::endl;
 }
 
 void RealKheperaIVExperimentLoopFunctions::RobotThreadTx(SInt32 client_socket, const std::string &client_ip)
@@ -273,9 +279,6 @@ void RealKheperaIVExperimentLoopFunctions::RobotThreadTx(SInt32 client_socket, c
     CRadians z_rot, y_rot, x_rot;
     Real x, y;
     std::string robot_name;
-
-    std::cout << "Sending data to " << client_ip << std::endl;
-    std::cout << std::flush;
 
     while (!shutdown_flag_.load(std::memory_order_acquire))
     {
@@ -346,9 +349,6 @@ void RealKheperaIVExperimentLoopFunctions::RobotThreadRx(SInt32 client_socket, c
     std::vector<Real> robot_data_vec;
     UInt16 num_data_elements;
 
-    std::cout << "Receiving data from " << client_ip << std::endl;
-    std::cout << std::flush;
-
     /*
         Brief explanation of `bytes_received = ::recv(client_socket, buffer_ptr, remaining_size, 0);`:
 
@@ -392,14 +392,10 @@ void RealKheperaIVExperimentLoopFunctions::RobotThreadRx(SInt32 client_socket, c
 
         robot_data_vec.resize(num_data_elements);
 
-        std::cout << "debug ";
         for (auto itr = robot_data_vec.begin(); itr != robot_data_vec.end(); ++itr)
         {
             byte_arr >> (*itr);
-            std::cout << *itr << " ";
         }
-        std::cout << std::endl;
-        std::cout << std::flush;
 
         // Store the data
         {
@@ -518,19 +514,123 @@ void RealKheperaIVExperimentLoopFunctions::GetRobotTypeFromName(const std::strin
     std::getline(ss_name, type_str, '_');
 }
 
-void RealKheperaIVExperimentLoopFunctions::SetupExperiment()
+void RealKheperaIVExperimentLoopFunctions::InitializeExperimentalParameters(TConfigurationNode &t_tree)
 {
-    // id_data_str_map_ = RobotIdDataStrMap();
-
-    // InitializeJSON();
-
-    // Collect data at the zero-th time step
-    for (size_t i = 0; i < exp_params_.NumRobots; ++i)
+    // Extract XML information
+    try
     {
-        // XXXXXXXXXXXXXXX
-        // Convert and store data string
-        // id_data_str_map_[kheperaiv_entity.GetId()].push_back(ConvertDataToString(controller.GetData()));
+        // Call parent's Init
+        CLoopFunctions::Init(t_tree);
+
+        exp_params_.NumTrials = 1; // only one trial can be run at a time with real robot experiments
+
+        // Grab target fill ratio
+        GetNodeAttribute(GetNode(t_tree, "target_fill_ratio"), "value", exp_params_.TargetFillRatio);
+
+        TConfigurationNode &flawed_robots_node = GetNode(t_tree, "flawed_robots");
+        GetNodeAttribute(flawed_robots_node, "num", exp_params_.NumFlawedRobots);
+        GetNodeAttribute(flawed_robots_node, "activate_filter_for_all", exp_params_.FilterActiveForAll);
+
+        // Grab controller parameters
+        TConfigurationNode &controller_params_node = GetNode(GetNode(t_tree, "controller_params"), "params");
+
+        // Grab robot speeds
+        GetNodeAttribute(GetNode(controller_params_node, "wheel_turning"), "max_speed", exp_params_.RobotSpeed);
+
+        // Grab sensing and communications period
+        GetNodeAttribute(GetNode(controller_params_node, "comms"), "period_ticks", exp_params_.CommsPeriod);
+        GetNodeAttribute(GetNode(controller_params_node, "comms"), "single_hop_radius", exp_params_.CommsRange);
+
+        // Grab filter parameters
+        GetNodeAttribute(GetNode(controller_params_node, "sensor_degradation_filter"), "method", exp_params_.FilterMethod);
+        GetNodeAttribute(GetNode(controller_params_node, "sensor_degradation_filter"), "period_ticks", exp_params_.FilterPeriod);
+        GetNodeAttribute(GetNode(controller_params_node, "sensor_degradation_filter"), "dynamic_observation_queue", exp_params_.DynamicObservationQueue);
+        GetNodeAttribute(GetNode(controller_params_node, "sensor_degradation_filter"), "dynamic_observation_queue_window_size", exp_params_.DynamicObservationQueueWindowSize);
+
+        // Grab filter specific parameters
+        if (exp_params_.FilterMethod == "DELTA")
+        {
+            std::string pred_deg_model_B_str, pred_deg_var_R_str, init_mean_str, init_var_str, variant_str, lowest_assumed_acc_lvl_str;
+
+            // Check to see if the lowest assumed accuracy level possible is provided
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "pred_deg_model_B", pred_deg_model_B_str);
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "pred_deg_var_R", pred_deg_var_R_str);
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "init_mean", init_mean_str);
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "init_var", init_var_str);
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "lowest_assumed_acc_lvl", lowest_assumed_acc_lvl_str);
+            GetNodeAttribute(GetNode(GetNode(controller_params_node, "sensor_degradation_filter"), "params"), "variant", variant_str);
+
+            exp_params_.FilterSpecificParams = {{"pred_deg_model_B", pred_deg_model_B_str},
+                                                {"pred_deg_var_R", pred_deg_var_R_str},
+                                                {"init_mean", init_mean_str},
+                                                {"init_var", init_var_str},
+                                                {"variant", variant_str},
+                                                {"lowest_assumed_acc_lvl", lowest_assumed_acc_lvl_str}};
+        }
+        else
+        {
+            THROW_ARGOSEXCEPTION("Other filter methods are not implemented in the real robot loop functions yet.");
+        }
+
+        // Grab ground sensor parameters
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "period_ticks", exp_params_.MeasurementPeriod);
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "sensor_acc_b", exp_params_.ActualSensorAcc.at("b"));
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "sensor_acc_w", exp_params_.ActualSensorAcc.at("w"));
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "assumed_sensor_acc_b", exp_params_.AssumedSensorAcc.at("b"));
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "assumed_sensor_acc_w", exp_params_.AssumedSensorAcc.at("w"));
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "dynamic", exp_params_.DynamicDegradation);
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "true_deg_drift_coeff", exp_params_.GroundSensorDriftCoeff);
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "true_deg_diffusion_coeff", exp_params_.GroundSensorDiffusionCoeff);
+        GetNodeAttribute(GetNode(controller_params_node, "ground_sensor"), "lowest_degraded_acc_lvl", exp_params_.LowestDegradedAccuracyLevel);
+
+        // Grab observation queue size (0 if no queue is used)
+        GetNodeAttribute(GetNode(controller_params_node, "sensor_degradation_filter"), "observation_queue_size", exp_params_.ObservationQueueSize);
+        exp_params_.NumRobots = robot_ip_socket_map_.size(); // the number of range and bearing sensors is the same as the number of robots
+        exp_params_.Density = -1.0;                          // the density can only be calculated with real world measurements
+
+        // Grab number of steps
+        exp_params_.NumSteps = GetSimulator().GetMaxSimulationClock();
+
+        // Grab number of ticks in a second
+        TConfigurationNode &framework_experiment_node = GetNode(GetNode(GetSimulator().GetConfigurationRoot(), "framework"), "experiment");
+        GetNodeAttribute(framework_experiment_node, "ticks_per_second", ticks_per_sec_);
+
+        // Grab position and orientation distribution if applicable
+        TConfigurationNode &arena_node = GetNode(GetSimulator().GetConfigurationRoot(), "arena");
+
+        // Grab save path
+        GetNodeAttribute(GetNode(t_tree, "path"), "folder", exp_params_.SaveFolder);
+
+        // Check if folder exists
+        if (!std::filesystem::exists(exp_params_.SaveFolder))
+        {
+            THROW_ARGOSEXCEPTION("Save folder " + exp_params_.SaveFolder + " doesn't exist.");
+        }
+
+        LOG << "[INFO] Specifying number of robots = " << exp_params_.NumRobots << std::endl;
+        LOG << "[INFO] Specifying number of flawed robots = " << exp_params_.NumFlawedRobots << std::endl;
+        LOG << "[INFO] Specifying number of time steps = " << exp_params_.NumSteps << std::endl;
+        LOG << "[INFO] Specifying flawed assumed accuracies (b,w) = " << exp_params_.AssumedSensorAcc["b"] << "," << exp_params_.AssumedSensorAcc["w"] << std::endl;
+        LOG << "[INFO] Specifying actual accuracies (b,w) = " << exp_params_.ActualSensorAcc["b"] << "," << exp_params_.ActualSensorAcc["w"] << std::endl;
+        LOG << "[INFO] Specifying communication range = " << exp_params_.CommsRange << " m" << std::endl;
+        LOG << "[INFO] Specifying communication period = " << exp_params_.CommsPeriod << " ticks" << std::endl;
+        LOG << "[INFO] Specifying measurement period = " << exp_params_.MeasurementPeriod << " ticks" << std::endl;
+        LOG << "[INFO] Specifying robot speed = " << exp_params_.RobotSpeed << " cm/s" << std::endl;
+        LOG << "[INFO] Computed swarm density = " << exp_params_.Density << std::endl;
+        LOG << "[INFO] Specifying output folder = \"" << exp_params_.SaveFolder << "\"" << std::endl;
+        LOG << "[INFO] Running trial 1" << std::endl;
     }
+    catch (CARGoSException &ex)
+    {
+        THROW_ARGOSEXCEPTION_NESTED("Error parsing loop functions!", ex);
+    }
+
+    // Initialize the JSON data file
+    InitializeJSON();
+
+    // // Replace some JSON values
+    curr_json_["sim_type"] = "real_robot_dynamic_deg_1d";
+    curr_json_["seed"] = 8204;
 }
 
 void RealKheperaIVExperimentLoopFunctions::PreStep()
@@ -548,16 +648,82 @@ void RealKheperaIVExperimentLoopFunctions::PreStep()
 
 void RealKheperaIVExperimentLoopFunctions::PostExperiment()
 {
-    LOG << "Experiment completed." << std::endl;
-
-    // Send the stop flag
+    // Send stop signal to the robots
     {
         std::lock_guard<std::mutex> lock(pose_mutex_);
+
         robot_start_flag_ = UInt8(0);
     }
 
-    // Save data
-    // SaveData();
+    LOG << "[INFO] Experiment completed." << std::endl;
+
+    // Store the data in the JSON object
+    std::vector<std::vector<std::string>> vec;
+
+    vec.reserve(exp_params_.NumRobots);
+
+    // Check to see if all the data has been received (should be all of the tick count plus the initial data at time 0)
+    UInt32 final_tick_count = GetSimulator().GetSpace().GetSimulationClock();
+    UInt32 remainder = 0;
+
+    bool complete = false;
+
+    while (!complete)
+    {
+        // Test using an AND logic (assume it's complete first and see if that's true)
+        complete = true;
+
+        // Iterate through each data vector
+        {
+            std::lock_guard<std::mutex> lock(data_mutex_);
+
+            for (auto itr = robot_ip_data_map_.begin(); itr != robot_ip_data_map_.end(); ++itr)
+            {
+                if (itr->second.size() <= final_tick_count)
+                {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+
+        // Sleep for a while to let the messages come in since it's incomplete
+        if (!complete)
+        {
+            LOG << "[INFO] Waiting for robots to complete sending data. Do not terminate ARGoS." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000)); // wait for 2 seconds
+        }
+        else // clean up and store the data (sometimes more than needed would be transmitted)
+        {
+            std::lock_guard<std::mutex> lock(data_mutex_);
+
+            for (auto itr = sorted_robot_ids_.begin(); itr != sorted_robot_ids_.end(); ++itr)
+            {
+                // Find the IP based on the name
+                auto itr_ip_name = std::find_if(
+                    robot_ip_name_map_.begin(), robot_ip_name_map_.end(), [&itr](const auto &pair)
+                    { return pair.second == *itr; });
+
+                // Store into the data vector of only the expected size (removing extra data)
+                remainder = robot_ip_data_map_.at(itr_ip_name->first).size() - (final_tick_count + 1);
+
+                std::vector<std::string> correct_sized_data{robot_ip_data_map_.at(itr_ip_name->first).begin(),
+                                                            robot_ip_data_map_.at(itr_ip_name->first).end() - remainder};
+
+                vec.push_back(correct_sized_data); // store the values from the map, which are vectors of strings
+            }
+        }
+    }
+
+    // Store the data into disk
+    curr_json_["data_str"] = vec;
+
+    json_data_vec_.push_back(curr_json_);
+
+    SaveData();
+
+    LOG << "[INFO] Data saved to disk." << std::endl;
+    LOG << "[INFO] It is now safe to terminate ARGoS." << std::endl;
 }
 
 REGISTER_LOOP_FUNCTIONS(RealKheperaIVExperimentLoopFunctions, "real_kheperaiv_experiment_loop_functions")

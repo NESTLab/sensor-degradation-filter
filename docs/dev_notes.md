@@ -33,6 +33,8 @@
 
 - The `vicon_sdk` folder and its contents were copied from the [NESTLab/Vicon repository](https://github.com/NESTLab/Vicon/tree/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/vicon_sdk/Linux64).
 
+- The `RealKheperaIVExperimentLoopFunctions` class sets up a server (which we call the ARGoS server) that provides localization information to the robots and receive the robots' data. The localization information is provided by the Vicon server.
+
 ### Analyzing dynamic degradation data
 - Procedure for analyzing the dynamic degradation data:
     1. Extract using `extract_dynamic_degradation_data.py`. This will generate a bunch of HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values.

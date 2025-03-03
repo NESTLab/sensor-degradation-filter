@@ -8,12 +8,13 @@
 #include "vicon_sdk/DataStreamClient.h"
 #include "loop_functions/SensorDegLoopFunctions.hpp"
 #include "messages/RobotServerMessage.hpp"
-// #include "messages/ServerToRobotMessage.hpp"
 
 using namespace argos;
 using namespace nlohmann;
 
 namespace ViconSDK = ViconDataStreamSDK::CPP;
+
+using FilterSpecificParams = std::unordered_map<std::string, std::string>;
 
 struct RobotInfo
 {
@@ -48,11 +49,13 @@ public:
 
     virtual void PreStep();
 
-    // virtual void PostStep() override;
+    virtual void PostStep() {}
 
     virtual void PostExperiment() override;
 
-    virtual void SetupExperiment() override;
+    virtual void SetupExperiment() override { THROW_ARGOSEXCEPTION("`Setup` functionality is simulated and is not available for real robot experiments."); }
+
+    void InitializeExperimentalParameters(TConfigurationNode &t_tree);
 
     virtual CColor GetFloorColor(const CVector2 &c_position_on_plane) override { THROW_ARGOSEXCEPTION("`GetFloorColor` functionality is simulated and is not available for real robot experiments."); }
 

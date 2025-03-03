@@ -31,7 +31,7 @@
     <!-- *************** -->
 
     <controllers />
-        
+
     <!-- ****************** -->
     <!-- * Loop functions * -->
     <!-- ****************** -->
@@ -39,15 +39,77 @@
     <loop_functions
         library="build_real_kheperaiv/src/loop_functions/libsensor_degradation_filter_loop_functions"
         label="real_kheperaiv_experiment_loop_functions">
-        <vicon_server address="192.168.1.211" port="801"/>
-        <!-- argos_server: port is the desired port number you want to use -->
-        <argos_server port="8204" robot_to_server_msg_size="256" server_to_robot_msg_size="96"/> <!-- port is 200C in hex -->
-        <flawed_robots num="1" acc_b="0.75" acc_w="0.75" activate_filter_for_all="true" />
+        <!-- Vicon server to obtain localization information from -->
+        <vicon_server address="192.168.1.211" port="801" />
+        <!-- ARGoS server for communication with robots and to provide localization information (from the Vicon) -->
+        <argos_server port="8204" robot_to_server_msg_size="256" server_to_robot_msg_size="96" /> <!--
+        port is 200C in hex -->
+        <target_fill_ratio value="0.75" /> <!-- (read-only) target fill ratio of the experiment environment -->
+        <flawed_robots num="1" activate_filter_for_all="true" />
         <path folder="data/temp" /> <!-- path to the output data and datetime in filename -->
-        <!-- Connect the object name (listed in the Vicon Tracker app) to the robot IP -->
+        <!-- List of Khepera IV robots used in the experiment, listed by network name (same as in the Vicon Tracker app) and IP -->
         <kheperaiv_ids>
             <kheperaiv name="Khepera_6" address="192.168.1.206" />
         </kheperaiv_ids>
+        <!-- `controller_params` MUST MATCH the actual `bayes_cpf_diffusion_controller` node in the .argos file used by the robots -->
+        <controller_params>
+            <actuators>
+                <differential_steering implementation="default" />
+                <kheperaiv_wifi multicast_address="239.0.0.1" multicast_port="5000" />
+            </actuators>
+            <sensors>
+                <kheperaiv_ground implementation="rot_z_only" />
+                <kheperaiv_wifi
+                    multicast_address="239.0.0.1"
+                    multicast_port="5000"
+                    multicast_timeout="500" />
+                <kheperaiv_proximity implementation="default" show_rays="false" />
+            </sensors>
+            <params>
+                <diffusion
+                    go_straight_angle_range="-5:5"
+                    delta="0.1"
+                    bounds_x="-3:3"
+                    bounds_y="-3:3" />
+                <ground_sensor
+                    period_ticks="5"
+                    sensor_acc_b="0.95"
+                    sensor_acc_w="0.95"
+                    assumed_sensor_acc_b="0.95"
+                    assumed_sensor_acc_w="0.95"
+                    sim="true"
+                    dynamic="true"
+                    true_deg_drift_coeff="0.0"
+                    true_deg_diffusion_coeff="-1.0"
+                    lowest_degraded_acc_lvl="0.5" />
+                <comms period_ticks="10" single_hop_radius="0.7" />
+                <wheel_turning
+                    hard_turn_angle_threshold="90"
+                    soft_turn_angle_threshold="70"
+                    no_turn_angle_threshold="10"
+                    max_speed="10" /> <!-- speed in cm/s -->
+                <argos_server
+                    address="192.168.1.106"
+                    port="8204"
+                    robot_to_server_msg_size="96"
+                    server_to_robot_msg_size="96" /> <!-- port number is 200C in hex -->
+                <sensor_degradation_filter
+                    method="DELTA"
+                    period_ticks="5"
+                    observation_queue_size="1000"
+                    dynamic_observation_queue="true"
+                    use_weighted_avg_informed_est="true"
+                    dynamic_observation_queue_window_size="500">
+                    <params
+                        pred_deg_model_B="-5e-5"
+                        pred_deg_var_R="1e-4"
+                        init_mean="0.99"
+                        init_var="0.001"
+                        lowest_assumed_acc_lvl="0.5"
+                        variant="bin" /> <!-- DELTA filter specific parameters -->
+                </sensor_degradation_filter>
+            </params>
+        </controller_params>
     </loop_functions>
 
     <!-- *********************** -->
@@ -73,7 +135,7 @@
         <floor id="floor" source="image" path="argos/floor_qr_code_pattern_black_white.png" />
 
         <!-- Place four boxes in a square to delimit the arena -->
-        <box id="wall_north" size="10,0.1,0.5" movable="false">
+        <!-- <box id="wall_north" size="10,0.1,0.5" movable="false">
             <body position="0,0.9273198961208501,0" orientation="0,0,0" />
         </box>
         <box id="wall_south" size="10,0.1,0.5" movable="false">
@@ -84,7 +146,7 @@
         </box>
         <box id="wall_west" size="0.1,10,0.5" movable="false">
             <body position="-0.9273198961208501,0,0" orientation="0,0,0" />
-        </box>
+        </box> -->
 
         <!-- Place a foot-bot in the origin and bind it to the controller -->
         <!-- <distribute>
@@ -129,10 +191,7 @@
  
       $ argos3 -q media
   -->
-    <media>
-        <range_and_bearing id="rab" />
-        <led id="leds" />
-    </media>
+    <media />
     <!-- ****************** -->
     <!-- * Visualization * -->
     <!-- ****************** -->
@@ -151,7 +210,8 @@
         <qt-opengl>
             <camera>
                 <placements>
-                    <placement index="0" position="0,0,8.14689" look_at="0,0,0" up="1,0,0" lens_focal_length="35" />
+                    <placement index="0" position="0,0,8.14689" look_at="0,0,0" up="1,0,0"
+                        lens_focal_length="35" />
                 </placements>
             </camera>
         </qt-opengl>
