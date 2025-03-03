@@ -50,6 +50,7 @@
         <!-- List of Khepera IV robots used in the experiment, listed by network name (same as in the Vicon Tracker app) and IP -->
         <kheperaiv_ids>
             <kheperaiv name="Khepera_6" address="192.168.1.206" />
+            <kheperaiv name="Khepera_10" address="192.168.1.210" />
         </kheperaiv_ids>
         <!-- `controller_params` MUST MATCH the actual `bayes_cpf_diffusion_controller` node in the .argos file used by the robots -->
         <controller_params>
@@ -91,7 +92,7 @@
                 <argos_server
                     address="192.168.1.106"
                     port="8204"
-                    robot_to_server_msg_size="96"
+                    robot_to_server_msg_size="256"
                     server_to_robot_msg_size="96" /> <!-- port number is 200C in hex -->
                 <sensor_degradation_filter
                     method="DELTA"

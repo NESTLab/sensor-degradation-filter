@@ -253,6 +253,7 @@ void RealKheperaIVExperimentLoopFunctions::AcceptConnections()
         }
 
         LOG << "[INFO] Robot connected from IP: " << client_ip << ". Total connected: " << num_connected_robots_ << std::endl;
+        LOG.Flush();
 
         // Spawn a new receiving and sending threads
         std::thread rx_thread(&RealKheperaIVExperimentLoopFunctions::RobotThreadRx, this, client_socket, client_ip);
@@ -640,7 +641,7 @@ void RealKheperaIVExperimentLoopFunctions::PreStep()
         std::lock_guard<std::mutex> lock(pose_mutex_);
         if (robot_start_flag_ != 1)
         {
-            LOG << "Experiment started, robots will now begin operation." << std::endl;
+            LOG << "[INFO] Experiment started, robots will now begin operation." << std::endl;
             robot_start_flag_ = UInt8(1);
         }
     }
@@ -656,6 +657,8 @@ void RealKheperaIVExperimentLoopFunctions::PostExperiment()
     }
 
     LOG << "[INFO] Experiment completed." << std::endl;
+    LOG << "[INFO] Waiting for robots to complete sending data. Do not terminate ARGoS." << std::endl;
+    LOG.Flush();
 
     // Store the data in the JSON object
     std::vector<std::vector<std::string>> vec;
@@ -690,7 +693,6 @@ void RealKheperaIVExperimentLoopFunctions::PostExperiment()
         // Sleep for a while to let the messages come in since it's incomplete
         if (!complete)
         {
-            LOG << "[INFO] Waiting for robots to complete sending data. Do not terminate ARGoS." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(2000)); // wait for 2 seconds
         }
         else // clean up and store the data (sometimes more than needed would be transmitted)
