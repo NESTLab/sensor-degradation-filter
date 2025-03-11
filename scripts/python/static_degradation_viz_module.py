@@ -63,6 +63,12 @@ class StaticDegradationJsonData:
             self.meas_period = json_dict["meas_period"]
             self.speed = json_dict["speed"]
             self.density = np.round(json_dict["density"], 3)
+        elif "real_robot" in self.sim_type:
+            self.fully_connected = False
+            self.comms_range = json_dict["comms_range"]
+            self.meas_period = json_dict["meas_period"]
+            self.speed = json_dict["speed"]
+            self.density = np.round(json_dict["density"], 3)
         else:
             raise ValueError("Unknown sim_type detected: {0}".format(self.sim_type))
 
@@ -1230,6 +1236,7 @@ def plot_multix_boxplot_plotly(
             ],
             ticktext=np.tile(x2_labels, len(x1_values)).tolist(),
             tickfont={"size": 24 if "x2_tick_font_size" not in kwargs else kwargs["x2_tick_font_size"]},
+            showticklabels=True if "show_x2" not in kwargs else kwargs["show_x2"],
             side="bottom" if "x2_side" not in kwargs else kwargs["x2_side"]
         ) if x2_key else None,
         legend=go.layout.Legend(

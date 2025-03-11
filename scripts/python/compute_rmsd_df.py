@@ -60,6 +60,29 @@ def process_and_compute_rmsd(
     if (len(inf_est_df_filepaths) != len(sensor_acc_df_filepaths)):
         raise RuntimeError("The number of \"{0}*\" files and \"{1}*\" are not equal.".format(ddvm.INF_EST_DF_PREFIX, ddvm.SENSOR_ACC_DF_PREFIX))
 
+    # Match the sensor accuracy df to the informed estimate df of the same parameter set
+    pairings = []
+
+    for inf_path in inf_est_df_filepaths:
+        filename = os.path.basename(inf_path)
+
+        # Strip unnecessary elements
+        common_elements = filename.removeprefix("inf_est")
+
+        # Find the sensor accuracy df with the same common element
+        candidate_paths = [p for p in sensor_acc_df_filepaths if common_elements in p]
+
+        if len(candidate_paths) > 1:
+            raise RuntimeError("More than one sensor_acc_*.h5 matches the common element of {0}".format(common_elements))
+        elif len(candidate_paths) == 0:
+            raise RuntimeError("None of the sensor_acc_*.h5 matches the common element of {0}".format(common_elements))
+
+        pairings.append((inf_path, candidate_paths[0]))
+
+    if args.verbose:
+        print("Pairings of DataFrame paths:")
+        [print("\t", p1, "\t<--->\t", p2) for p1, p2 in pairings]
+
     def parallel_load_compute_rmsd(inf_est_df_path, sensor_acc_df_path):
 
         # Load HDF files
@@ -70,7 +93,7 @@ def process_and_compute_rmsd(
         return ddvm.compute_raw_rmsd(inf_est_df, sensor_acc_df)
 
     dfs = Parallel(n_jobs=-1, verbose=0)(
-        delayed(parallel_load_compute_rmsd)(inf_est_df, sensor_acc_df) for inf_est_df, sensor_acc_df in zip(inf_est_df_filepaths, sensor_acc_df_filepaths)
+        delayed(parallel_load_compute_rmsd)(inf_est_df, sensor_acc_df) for inf_est_df, sensor_acc_df in pairings
     )
 
     df = pd.concat(dfs, axis=0, ignore_index=True)

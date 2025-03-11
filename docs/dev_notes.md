@@ -37,7 +37,7 @@
 
 ### Analyzing dynamic degradation data
 - Procedure for analyzing the dynamic degradation data:
-    1. Extract using `extract_dynamic_degradation_data.py`. This will generate a bunch of HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values.
+    1. Extract using `extract_dynamic_degradation_data.py`. This will generate a bunch of HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values. WARNING: Trials of the same experiment **must** be stored in the same directory; otherwise, the extracted data will contain duplicates.
     2. Compute the RMSD values using `compute_rmsd_df.py`. This will take the HDF files from the previous step to compute and concatenate into a single HDF file with the RMSD values.
     3. Extract the RMSD HDF files into different CSV files with a unique parameter set using `extract_isolated_rmsd_data.py`. Typically the set is ["true_drift_coeff", "lowest_degraded_acc_lvl", "fsp_pred_deg_model_B", "correct_sensor_acc_b", "flawed_sensor_acc_b", "tfr"] where a single CSV file is only for a specific combination of the set.
 

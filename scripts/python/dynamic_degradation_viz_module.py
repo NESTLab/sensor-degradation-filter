@@ -316,7 +316,6 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
     df = inf_est_df.loc[:, ~inf_est_df.columns.str.startswith("x")].copy(deep=True)
 
     # Get the columns desired
-
     regular_x_columns = [col for col in inf_est_df.columns if col.startswith("x_") and not col.startswith("x_prime_")]
     weighted_x_columns = [col for col in inf_est_df.columns if col.startswith("x_prime_")]
     b_hat_columns = [col for col in sensor_acc_df.columns if col.startswith("b_hat_")]
@@ -329,7 +328,7 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
             row["tfr"]
         ),
         axis=1
-    )
+    ).values
 
     df["weighted_inf_est_rmsd"] = inf_est_df.apply(
         lambda row: rmsd(
@@ -337,7 +336,7 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
             row["tfr"]
         ),
         axis=1
-    )
+    ).values
 
     df["sensor_acc_rmsd"] = sensor_acc_df.apply(
         lambda row: rmsd(
@@ -345,7 +344,7 @@ def compute_raw_rmsd(inf_est_df: pd.DataFrame, sensor_acc_df: pd.DataFrame):
             row[b_columns].values
         ),
         axis=1
-    )
+    ).values
 
     return df
 

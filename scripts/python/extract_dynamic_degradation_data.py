@@ -100,7 +100,11 @@ def main(args):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Extract time series data from simulated DYNAMIC DEGRADATION experiments to save into HDF files. The data is stored into a pair of Pandas DataFrame for each unique combination of \"tfr\", \"flawed_sensor_acc_b\", and \"correct_sensor_acc_b\".")
+    parser = argparse.ArgumentParser(
+        description="Extract time series data from simulated DYNAMIC DEGRADATION experiments to save into HDF files.\n"
+        "The data is stored into a pair of Pandas DataFrame for each unique combination of \"tfr\", \"flawed_sensor_acc_b\", and \"correct_sensor_acc_b\".\n"
+        "WARNING: Trials of the same experiment must be stored in the same directory; otherwise, the extracted data will contain duplicates.",
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("FOLDER", type=str, help="path to the folder containing all the JSON data files; the files can be several levels deep")
     parser.add_argument("--output", default="dynamic_degradation_data.h5", type=str, help="output filename suffix (default: dynamic_degradation_data.h5)")
     parser.add_argument("--key", default="df", help="dictionary key when storing the Pandas DataFrame (default: \"df\")")
