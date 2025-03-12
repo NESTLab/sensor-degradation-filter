@@ -125,7 +125,7 @@ void KheperaIVDiffusionMotion::Init(TConfigurationNode &xml_node)
     }
     else if (ground_sensor_params_.LowestDegradedAccuracyLevel < 0.5)
     {
-        THROW_ARGOSEXCEPTION("Cannot have a sensor accuracy lower than 0.5.");
+        LOGERR << "[WARN] Setting a true sensor accuracy bound lower than 0.5." << std::endl;
     }
 
     // Initialize degradation filter
@@ -188,7 +188,7 @@ void KheperaIVDiffusionMotion::Init(TConfigurationNode &xml_node)
         }
         else if (lowest_assumed_acc_lvl < 0.5)
         {
-            THROW_ARGOSEXCEPTION("Cannot have an assumed sensor accuracy lower than 0.5.");
+            LOGERR << "[WARN] Setting an assumed sensor accuracy bound lower than 0.5." << std::endl;
         }
 
         sensor_degradation_filter_ptr_ =
