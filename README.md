@@ -90,7 +90,6 @@ Once the simulation completes, you can parse the JSON data files yourself to vis
 
 Alternatively, this repository contains utility functions in Python to process and plot the data. The method of choice is to use them in a Jupyter notebook for data visualization. See [here](docs/utility_scripts_functions.md) for detailed instructions on the utility functions.
 
-
 ## For NEST Lab users
 ### Running physical robot experiments
 For the ASDF work, no additional work needs to be done. The robot controllers are run on the server which can used the controllers compiled here.

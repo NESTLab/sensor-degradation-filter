@@ -26,8 +26,88 @@ options:
   --verbose        flag to run with verbose output
 ```
 
+### `extract_dynamic_degradation_data.py`
+(For use with the dynamic degradation data only) This script converts the raw JSON data files into HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values. Instead of manually processing these HDF file pairs, you should run the [`compute_rmsd_df.py`](#compute_rmsd_dfpy) script.
+
+>:warning: Trials of the same experiment **must** be stored in the same directory before running this script; otherwise, the extracted data will contain duplicates.
+
+```
+$ extract_dynamic_degradation_data.py <FOLDER-CONTAINING-JSON-DATA>
+```
+Script help:
+```
+usage: extract_dynamic_degradation_data.py [-h] [--output OUTPUT] [--key KEY] [--verbose] FOLDER
+
+Extract time series data from simulated DYNAMIC DEGRADATION experiments to save into HDF files.
+The data is stored into a pair of Pandas DataFrame for each unique combination of "tfr", "flawed_sensor_acc_b", and "correct_sensor_acc_b".
+WARNING: Trials of the same experiment must be stored in the same directory; otherwise, the extracted data will contain duplicates.
+
+positional arguments:
+  FOLDER           path to the folder containing all the JSON data files; the files can be several levels deep
+
+options:
+  -h, --help       show this help message and exit
+  --output OUTPUT  output filename suffix (default: dynamic_degradation_data.h5)
+  --key KEY        dictionary key when storing the Pandas DataFrame (default: "df")
+  --verbose        flag to run with verbose output
+```
+
+### `compute_rmsd_df.py`
+(For use with the dynamic degradation data only) This script computes the RMSD values for the HDF files generated using the [`extract_dynamic_degradation_data.py`](#extract_dynamic_degradation_datapy) script. It outputs a single HDF file filled with the RMSD values. 
+
+>:info: You may need to remove the empty HDF files from the previous step&mdash;these are generated when a particular combination of the parameters do not have the experimental data to be matched with. Otherwise, the script might raise errors.
+
+```
+$ compute_rmsd_df.py <FOLDER-CONTAINING-HDF-FILE-PAIRS>
+```
+Script help:
+```
+usage: compute_rmsd_df.py [-h] [--output OUTPUT] [--key KEY] [--verbose] FOLDER
+
+Compute the RMSD values from raw dynamic degradation HDF files and concatenate into a single HDF file.
+
+positional arguments:
+  FOLDER           path to the folder containing all the JSON data files; the files can be several levels deep
+
+options:
+  -h, --help       show this help message and exit
+  --output OUTPUT  output filename (default: rmsd_data.h5)
+  --key KEY        dictionary key when storing the Pandas DataFrame (default: "df")
+  --verbose        flag to run with verbose output
+```
+
+### `extract_isolated_rmsd_data.py`
+(For use with the dynamic degradation data only) This script extracts the RMSD HDF files generated from [`compute_rmsd_df.py`](#compute_rmsd_dfpy) into different HDF files with a unique parameter set. Typically, the set is <`true_drift_coeff`, `lowest_degraded_acc_lvl`, `fsp_pred_deg_model_B`, `correct_sensor_acc_b`, `flawed_sensor_acc_b`, `tfr`> where a single HDF file is only for a specific combination of the set.
+
+>:info: It is recommended that you run this script on a high-performance computing (HPC) cluster, as it consumes a lot of RAM.
+
+```
+$ extract_isolated_rmsd_data.py <FOLDER-CONTAINING-RMSD-HDF-FILES>
+```
+Script help:
+```
+usage: extract_isolated_rmsd_data.py [-h] [--key KEY] [--column_titles COLUMN_TITLES [COLUMN_TITLES ...]] FOLDER
+
+(HPC USE ONLY) Extract isolated RMSD data from multiple RMSD HDF files. This outputs HDF files for each unique combination of each
+parameter.
+
+positional arguments:
+  FOLDER                path to the folder containing all the RMSD HDF data files; the files can be several levels deep
+
+options:
+  -h, --help            show this help message and exit
+  --key KEY             dictionary key when storing the Pandas DataFrame (default: "df")
+  --column_titles COLUMN_TITLES [COLUMN_TITLES ...]
+                        list of column titles to create combinations of HDF files from (default: ["true_drift_coeff",
+                        "lowest_degraded_acc_lvl", "fsp_pred_deg_model_B", "correct_sensor_acc_b", "flawed_sensor_acc_b", "tfr"])
+```
+
 ### `scripts.python.static_degradation_viz_module` module
-This Python module provides the following functions for you to plot data extracted using the `extract_convergence_accuracy_data.py` script. The list below describes the main functions you'll need for data visualization and is not an exhaustive one.
+This Python module provides the following functions for you to plot:
+1. the convergence and accuracy data extracted using the `extract_convergence_accuracy_data.py` script, or
+2. the RMSD data obtained using the `extract_isolated_rmsd_data.py` script.
+
+The list below describes the main functions you'll need for data visualization and is not an exhaustive one.
 
 - `plot_scatter_plotly`: plots a scatter plot
   <details><summary>Example usage:</summary>
