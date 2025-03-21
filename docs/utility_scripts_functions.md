@@ -53,9 +53,9 @@ options:
 ```
 
 ### `compute_rmsd_df.py`
-(For use with the dynamic degradation data only) This script computes the RMSD values for the HDF files generated using the [`extract_dynamic_degradation_data.py`](#extract_dynamic_degradation_datapy) script. It outputs a single HDF file filled with the RMSD values. 
+(For use with the dynamic degradation data only) This script computes the RMSD values for the HDF files generated using the [`extract_dynamic_degradation_data.py`](#extract_dynamic_degradation_datapy) script. It outputs a single HDF file filled with the RMSD values.
 
->:info: You may need to remove the empty HDF files from the previous step&mdash;these are generated when a particular combination of the parameters do not have the experimental data to be matched with. Otherwise, the script might raise errors.
+>:information_source: You may need to remove the empty HDF files from the previous step&mdash;these are generated when a particular combination of the parameters do not have the experimental data to be matched with. Otherwise, the script might raise errors.
 
 ```
 $ compute_rmsd_df.py <FOLDER-CONTAINING-HDF-FILE-PAIRS>
@@ -79,7 +79,7 @@ options:
 ### `extract_isolated_rmsd_data.py`
 (For use with the dynamic degradation data only) This script extracts the RMSD HDF files generated from [`compute_rmsd_df.py`](#compute_rmsd_dfpy) into different HDF files with a unique parameter set. Typically, the set is <`true_drift_coeff`, `lowest_degraded_acc_lvl`, `fsp_pred_deg_model_B`, `correct_sensor_acc_b`, `flawed_sensor_acc_b`, `tfr`> where a single HDF file is only for a specific combination of the set.
 
->:info: It is recommended that you run this script on a high-performance computing (HPC) cluster, as it consumes a lot of RAM.
+>:information_source: It is recommended that you run this script on a high-performance computing (HPC) cluster, as it consumes a lot of RAM.
 
 ```
 $ extract_isolated_rmsd_data.py <FOLDER-CONTAINING-RMSD-HDF-FILES>
