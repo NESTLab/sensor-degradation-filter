@@ -1,6 +1,6 @@
 # Sensor Degradation Filters for Minimalistic Collective Perception
 ## Introduction
-This repository provides the code to simulate the experiments shown in [Adaptive Self-Calibration for Minimalistic Collective Perception by Imperfect Robot Swarms](https://arxiv.org/abs/2410.21546).
+This repository provides the code to simulate the experiments shown in [Adaptive Self-Calibration for Minimalistic Collective Perception by Imperfect Robot Swarms](https://arxiv.org/abs/2410.21546) and in [BayesCPF: Enabling Collective Perception in Robot Swarms with Degrading Sensors]().
 
 Two simulators are provided here:
 1. Python-based static topology simulator, and
@@ -89,3 +89,37 @@ In both the static and dynamic simulations, the data will be stored as JSON file
 Once the simulation completes, you can parse the JSON data files yourself to visualize the data.
 
 Alternatively, this repository contains utility functions in Python to process and plot the data. The method of choice is to use them in a Jupyter notebook for data visualization. See [here](docs/utility_scripts_functions.md) for detailed instructions on the utility functions.
+
+
+## For NEST Lab users
+### Running physical robot experiments
+For the ASDF work, no additional work needs to be done. The robot controllers are run on the server which can used the controllers compiled here.
+
+For the BayesCPF work, you will need to cross-compile the robot controller. The controller code here is not adjusted for compilation on the actual Khepera IV robots, but I created a [dedicated repository](https://github.com/khaiyichin/sensor-degradation-filter-real-kheperaiv.git) just for that. You do not need to clone the repository manually; it is included as this repository as a submodule. Simply do
+```
+$ git submodule update --init --recursive
+```
+and the repository should appear in the `real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv/` directory.
+
+#### Cross-compile
+To cross-compile the executable and libraries for the Khepera IV robots, follow the instructions in the controller repository's [README](./real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv/README.md).
+
+#### Rebuild loop functions
+One may ask: _"Why care about running loop functions at all if the robots run their controllers locally? Won't the robots run without intervention for the ARGoS server?"_ While it is true that the controller shouldn't require any interaction with the ARGoS server, a loop functions class&mdash;run on the ARGoS server&mdash;lets us enforce a decentralized communication scheme (it's technically partially decentralized). The ARGoS server is also useful in becoming a common location to store all the robots' data.
+
+Rebuild this project with the `-DBUILD_REAL_KHEPERAIV_EXPERIMENT_LOOP_FUNCTIONS=True` flag.
+```
+$ cd build_argos
+$ cmake .. -DBUILD_REAL_KHEPERAIV_EXPERIMENT_LOOP_FUNCTIONS=True
+$ make
+```
+
+See [here](docs/parameter_file_setup.md#argos-server-configuration-file) on how to configure and run the `.argos` file for the real robot experiments.
+
+### FAQ
+
+- On the ARGoS server, it may streamline the experiment workflow if you use Terminator with multiple terminals, each SSH'd onto a different Khepera IV robot. You can use `Super` + `T` to broadcast the commands you type in a single terminal to all the others. _(You may need to do `ibus exit` if you encounter the issue where the other terminals have duplicated letters to your commands.)_
+
+- You might encounter the "Error binding socket server at port number 8204: Address already in use" message on the ARGoS server when you terminate and restart the program in quick succession. Wait for 15-30 seconds for the socket to clear, and then try running ARGoS again.
+
+- On the Vicon server (the Windows machine), it's best to _only_ check the objects that correspond to the Khepera IV robots in the experiment, in the Vicon Tracker program. Otherwise, the Vicon may accidentally pick up unrelated object which will break the loop functions.

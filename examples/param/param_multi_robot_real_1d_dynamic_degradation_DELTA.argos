@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<argos-configuration>
+
+    <!-- ************************* -->
+    <!-- * General configuration * -->
+    <!-- ************************* -->
+    <framework>
+        <!--
+        System configuration:
+        - threads: the number of slave threads to parallelize the
+          computation. For less than 100 robots thread management is not
+          beneficial, so here we set it to 0. When set to 0, it means that
+          the computation is not parallelized: the main thread does
+          everything.
+    -->
+        <system threads="0" />
+        <!--
+        Experiment configuration:
+        - length: total experiment time in seconds (0 means the experiment
+          has no time limit)
+        - ticks_per_second: number of ticks per second (int value)
+        - random_seed: seed of the main random number generator. If unset
+          or set to zero, this value is taken from the clock and a warning
+          message is displayed.
+    -->
+        <experiment length="100" ticks_per_second="10" random_seed="0" />
+    </framework>
+
+    <!-- *************** -->
+    <!-- * Controllers * -->
+    <!-- *************** -->
+
+    <controllers />
+
+    <!-- ****************** -->
+    <!-- * Loop functions * -->
+    <!-- ****************** -->
+
+    <loop_functions
+        library="loop_functions/libsensor_degradation_filter_loop_functions"
+        label="real_kheperaiv_experiment_loop_functions">
+        <vicon_server address="192.168.1.211" port="801" /> <!-- Vicon server to obtain localization information from -->
+        <argos_server port="8204" robot_to_server_msg_size="256" server_to_robot_msg_size="96" /> <!-- ARGoS server for communication with robots and to provide localization information (from the Vicon) -->
+        <target_fill_ratio value="0.448" /> <!-- (read-only) target fill ratio of the experiment environment -->
+        <flawed_robots num="0" activate_filter_for_all="true" />
+        <path folder="data/temp" /> <!-- path to the output data and datetime in filename -->
+        <!-- List of Khepera IV robots used in the experiment, listed by network name (same as in the Vicon Tracker app) and IP -->
+        <kheperaiv_ids>
+            <!-- <kheperaiv name="Khepera_1" address="192.168.1.201" /> -->
+            <!-- <kheperaiv name="Khepera_2" address="192.168.1.202" /> -->
+            <!-- <kheperaiv name="Khepera_3" address="192.168.1.203" /> -->
+            <!-- <kheperaiv name="Khepera_5" address="192.168.1.205" /> -->
+            <!-- <kheperaiv name="Khepera_6" address="192.168.1.206" />/ -->
+            <!-- <kheperaiv name="Khepera_7" address="192.168.1.207" /> -->
+            <!-- <kheperaiv name="Khepera_9" address="192.168.1.209" /> -->
+            <!-- <kheperaiv name="Khepera_10" address="192.168.1.210" /> -->
+        </kheperaiv_ids>
+        <!-- `controller_params` MUST MATCH the actual `bayes_cpf_diffusion_controller` node in the .argos file used by the robots -->
+        <controller_params>
+            <actuators>
+                <differential_steering implementation="default" />
+                <kheperaiv_wifi multicast_address="239.0.0.1" multicast_port="5000" />
+            </actuators>
+            <sensors>
+                <kheperaiv_ground implementation="rot_z_only" />
+                <kheperaiv_wifi
+                    multicast_address="239.0.0.1"
+                    multicast_port="5000"
+                    multicast_timeout="500" />
+                <kheperaiv_proximity implementation="default" show_rays="false" />
+            </sensors>
+            <params>
+                <diffusion
+                    go_straight_angle_range="-5:5"
+                    delta="0.1"
+                    proximity_noise_ground="0.2"
+                    bounds_x="-1.55:1.55"
+                    bounds_y="-1.55:1.55" />
+                <ground_sensor
+                    period_ticks="5"
+                    sensor_acc_b="0.999"
+                    sensor_acc_w="0.999"
+                    assumed_sensor_acc_b="0.999"
+                    assumed_sensor_acc_w="0.999"
+                    sim="true"
+                    dynamic="true"
+                    true_deg_drift_coeff="-3e-5"
+                    true_deg_diffusion_coeff="1e-4"
+                    lowest_degraded_acc_lvl="0.5" />
+                <comms period_ticks="5" single_hop_radius="0.7" />
+                <wheel_turning
+                    hard_turn_angle_threshold="90"
+                    soft_turn_angle_threshold="70"
+                    no_turn_angle_threshold="10"
+                    max_speed="10" /> <!-- speed in cm/s -->
+                <argos_server
+                    address="192.168.1.120"
+                    port="8204"
+                    robot_to_server_msg_size="256"
+                    server_to_robot_msg_size="96" /> <!-- port number is 200C in hex -->
+                <sensor_degradation_filter
+                    method="DELTA"
+                    period_ticks="5"
+                    observation_queue_size="1000"
+                    dynamic_observation_queue="true"
+                    use_weighted_avg_informed_est="true"
+                    dynamic_observation_queue_window_size="500">
+                    <!-- init_mean must match assumed_sensor_acc* of <ground_sensor> -->
+                    <params
+                        pred_deg_model_B="-1.5e-5"
+                        pred_deg_var_R="1e-8"
+                        init_mean="0.999"
+                        init_var="0.001"
+                        lowest_assumed_acc_lvl="0.5"
+                        variant="bin" /> <!-- DELTA filter specific parameters -->
+                </sensor_degradation_filter>
+            </params>
+        </controller_params>
+    </loop_functions>
+
+    <!-- *********************** -->
+    <!-- * Arena configuration * -->
+    <!-- *********************** -->
+    <!--
+      Here you place all the objects in the arena.
+      All linear measures are expressed in meters.
+      Angles are expressed in degrees.
+      The 'size' attribute contains the size of the arena around the
+      origin.
+      To get help about which entities are available, type at the command
+      prompt:
+ 
+      $ argos3 -q entities
+ 
+      and to get help about a specific entity (for instance, the box)
+ 
+      $ argos3 -q box
+  -->
+    <arena size="5, 5, 1" center="0,0,0.5">
+
+        <!-- This is included for aesthetic reasons and serve no functional purpose -->
+        <floor id="floor" source="image" path="argos/floor_qr_code_pattern_black_white.png" />
+
+    </arena>
+
+    <!-- ******************* -->
+    <!-- * Physics engines * -->
+    <!-- ******************* -->
+    <!--
+      In ARGoS, multiple physics engines can run at the same time.
+      In this section you say which engines to use for the experiment.
+      To know which engines are available, type at the command prompt:
+ 
+      $ argos3 -q physics_engines
+  -->
+    <physics_engines>
+        <!--
+        Use a 2D dynamics engine.
+    -->
+        <dynamics2d id="dyn2d" />
+    </physics_engines>
+
+    <!-- ********* -->
+    <!-- * Media * -->
+    <!-- ********* -->
+    <!--
+      Here you specify the media in use. Media allow robots to communicate.
+      In this experiment, robots do not communicate, so no media are
+      specified.
+      To know which media are available, type at the command prompt:
+ 
+      $ argos3 -q media
+  -->
+    <media />
+
+    <!-- ****************** -->
+    <!-- * Visualization * -->
+    <!-- ****************** -->
+    <!--
+      Here you specify which visualization to use.
+      You can also not specify a visualization at all, in which case ARGoS
+      will run without showing anything.
+      Having no visualization is useful when you run ARGoS in a batch of
+      experiments to collect statistics.
+      To know which visualizations are available, type at the command
+      prompt:
+ 
+      $ argos3 -q visualizations
+  -->
+    <visualization>
+        <qt-opengl>
+            <camera>
+                <placements>
+                    <placement index="0" position="0,0,8.14689" look_at="0,0,0" up="1,0,0"
+                        lens_focal_length="35" />
+                </placements>
+            </camera>
+        </qt-opengl>
+    </visualization>
+
+</argos-configuration>

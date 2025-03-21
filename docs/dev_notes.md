@@ -26,19 +26,20 @@
 - The `DynamicDegradationDelta` class is a method that uses the ExtendedKalmanFilter to estimate the sensor accuracy and then apply the truncation based on the linear inequality constraints _only_ if the estimates violate the constraints. This highlights the main distinction from Charlie: the estimates are not modified within the EKF but after estimates are done. The modified estimates are also _not_ fed back into the filter here.
     - The terms "window size" and "queue size" _do not_ mean the same thing. The window size is used to find the moving average value of the degradation rate (so that we get dynamic observation queue sizes; this applies to the Charlie filter as well). The queue size strictly applies to the storage of observations (and past informed estimates, if requested).
 
-
-
-
 - Each `*DegradationJsonData` object contains data from multiple `num_flawed_robots` experiments (all trials of that experiment is included). The top-level key is `num_flawed_robots`. _E.g.,_ if there are two cases of `num_flawed_robots` within the same directory of JSON files, then all those files will be stored into one `*DegradationJsonData` object.
 
 - The `vicon_sdk` folder and its contents were copied from the [NESTLab/Vicon repository](https://github.com/NESTLab/Vicon/tree/38ca8d7b52a7a727e8d37c2fb49c1b2058a8ead7/vicon_sdk/Linux64).
 
 - The `RealKheperaIVExperimentLoopFunctions` class sets up a server (which we call the ARGoS server) that provides localization information to the robots and receive the robots' data. The localization information is provided by the Vicon server.
 
+### Analyzing static degradation data
+- Procedure for analyzing the static degradation data:
+    1. Extract the convergence and accuracy data using `extract_convergence_accuracy_data.py`. You have to set the convergence threshold as the second positional argument.
+
 ### Analyzing dynamic degradation data
 - Procedure for analyzing the dynamic degradation data:
     1. Extract using `extract_dynamic_degradation_data.py`. This will generate a bunch of HDF file pairs, one containing the informed estimate values, the other containing sensor accuracy values. WARNING: Trials of the same experiment **must** be stored in the same directory; otherwise, the extracted data will contain duplicates.
-    2. Compute the RMSD values using `compute_rmsd_df.py`. This will take the HDF files from the previous step to compute and concatenate into a single HDF file with the RMSD values.
+    2. Compute the RMSD values using `compute_rmsd_df.py`. This will take the HDF files from the previous step to compute and concatenate into a single HDF file with the RMSD values. _(You may need to remove the empty HDF files from the previous step&mdash;these are generated when a particular combination of the parameters do not have the experimental data to be matched with.)_
     3. Extract the RMSD HDF files into different CSV files with a unique parameter set using `extract_isolated_rmsd_data.py`. Typically the set is ["true_drift_coeff", "lowest_degraded_acc_lvl", "fsp_pred_deg_model_B", "correct_sensor_acc_b", "flawed_sensor_acc_b", "tfr"] where a single CSV file is only for a specific combination of the set.
 
-- This is done to compartmentalize the different parts of the data processing procedure, which should improve debugging (if things go wrong). It also provides a bit of flexibility in accessing data; the first step contains *all* the raw data that can be used differently downstream. The second step contains RMSD data for multiple parameter sets, while the third step generates a specific parameter set's RMSD data ready for data visualization (the CSV makes it easy for debugging also).
+- This is done to compartmentalize the different parts of the data processing procedure, which should improve debugging (if things go wrong). It also provides a bit of flexibility in accessing data; the first step contains *all* the raw data that can be used differently downstream. The second step contains RMSD data for multiple parameter sets, while the third step generates a specific parameter set's RMSD data ready for data visualization.

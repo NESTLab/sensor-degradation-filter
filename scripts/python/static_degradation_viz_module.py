@@ -1442,6 +1442,7 @@ def plot_scatter_plotly(
     # Update layout for better visibility
     fig.update_layout(
         font_family="Times New Roman",
+        plot_bgcolor="rgb(245, 249, 252)",
         title=None if "title" not in kwargs or ("show_title" in kwargs and not kwargs["show_title"]) else kwargs["title"],
         xaxis_title_standoff=10,  # Adjust space between axis title and axis labels
         margin=dict(l=3, r=3, t=3 if ("show_title" in kwargs and kwargs["show_title"] == False) or "title" not in kwargs else 40, b=3),  # Adjust margins for better spacing
