@@ -1,6 +1,6 @@
 # Sensor Degradation Filters for Minimalistic Collective Perception
 ## Introduction
-This repository provides the code to simulate the experiments shown in [Adaptive Self-Calibration for Minimalistic Collective Perception by Imperfect Robot Swarms](https://arxiv.org/abs/2410.21546) and in [BayesCPF: Enabling Collective Perception in Robot Swarms with Degrading Sensors]().
+This repository provides the code to simulate the experiments shown in [Adaptive Self-Calibration for Minimalistic Collective Perception by Imperfect Robot Swarms](https://arxiv.org/abs/2410.21546) and in [BayesCPF: Enabling Collective Perception in Robot Swarms with Degrading Sensors](https://arxiv.org/abs/2504.04774).
 
 Two simulators are provided here:
 1. Python-based static topology simulator, and
@@ -92,9 +92,9 @@ Alternatively, this repository contains utility functions in Python to process a
 
 ## For NEST Lab users
 ### Running physical robot experiments
-For the ASDF work, no additional work needs to be done. The robot controllers are run on the server which can used the controllers compiled here.
+For the ASCF work, no additional work needs to be done. The robot controllers are run on the server which can used the controllers compiled here.
 
-For the BayesCPF work, you will need to cross-compile the robot controller. The controller code here is not adjusted for compilation on the actual Khepera IV robots, but I created a [dedicated repository](https://github.com/khaiyichin/sensor-degradation-filter-real-kheperaiv.git) just for that. You do not need to clone the repository manually; it is included as this repository as a submodule. Simply do
+For the BayesCPF work, you will need to cross-compile the robot controller. The controller code here is not adjusted for compilation on the actual Khepera IV robots, but I created a [dedicated repository](https://github.com/khaiyichin/sensor-degradation-filter-real-kheperaiv.git) just for that. You _do not_ need to clone the repository manually; it is included as this repository as a submodule. Simply do
 ```
 $ git submodule update --init --recursive
 ```

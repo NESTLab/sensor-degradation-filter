@@ -241,7 +241,7 @@ The swarm density is modified indirectly through the positions of the 4 walls th
 ```
 
 ## Real robot experiments at the NEST Lab (which has an existing Vicon server setup)
-The content here **does not** apply to the ASDF work (static sensor degradation); see instead the format outlined in the [Dynamic Topology Simulation](#dynamic-topology-simulation) section.
+The content here **does not** apply to the ASCF work (static sensor degradation); see instead the format outlined in the [Dynamic Topology Simulation](#dynamic-topology-simulation) section.
 
 ### ARGoS server configuration file
 Here only the `loop_functions` node of the `.argos` file is shown; the other nodes can be empty&mdash;see the [example parameter file](../examples/param/param_multi_robot_real_1d_dynamic_degradation_DELTA.argos) for more information.
@@ -430,4 +430,4 @@ You can start this on the robot (after the ARGoS server is up) as follows&mdash;
 ```
 $ bayes_cpf_diffusion_controller -c controller_config.argos -i bcdc
 ```
-Note that this requires that the `bayes_cpf_diffusion_controller` executable and its dependent libraries be copied over onto the robot. See the controller repository's [README](./real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv/README.md) for how to do that.
+Note that this requires that the `bayes_cpf_diffusion_controller` executable and its dependent libraries be copied over onto the robot. See the controller repository's [README](../real_kheperaiv_controller/sensor-degradation-filter-real-kheperaiv/README.md) for how to do that.
